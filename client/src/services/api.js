@@ -2,9 +2,9 @@ const API_BASE_URL = '/api';
 const GAS_DIRECT_URL = "https://script.google.com/macros/s/AKfycbwdD1v1L2luhHfejCEXaloSQMjz30HIx4wqCiftc7xS0Ja9TRxXWuy1Y-q686IjJPiZlw/exec";
 
 /**
- * แปลงคำขอ REST ไปเป็น Direct GAS Web App Action อัตโนมัติ (High Performance & Failover)
+ * เรียก Google Apps Script Web App โดยตรง (High Speed & Direct Connector)
  */
-async function callDirectGas(endpoint, options = {}) {
+export async function callDirectGas(endpoint, options = {}) {
   let action = '';
   let payload = {};
 
@@ -16,7 +16,7 @@ async function callDirectGas(endpoint, options = {}) {
     }
   }
 
-  // ดึงสิทธิ์ Admin จาก LocalStorage
+  // ดึงข้อมูล Admin จาก LocalStorage
   let adminUserId = '';
   let adminDisplayName = '';
   try {
@@ -31,11 +31,11 @@ async function callDirectGas(endpoint, options = {}) {
   const [path, queryString] = endpoint.split('?');
 
   if (path === '/menu' || path.startsWith('/menu')) {
-    action = 'getAvailableMenus';
+    action = 'getAppData';
   } else if (path === '/orders' || path.startsWith('/orders')) {
     action = 'order';
   } else if (path === '/round' || path.startsWith('/round')) {
-    action = 'getRound';
+    action = 'getAppData';
   } else if (path === '/admin/check') {
     action = 'checkAdmin';
   } else if (path === '/admin/dashboard') {
@@ -68,38 +68,63 @@ async function callDirectGas(endpoint, options = {}) {
   const userId = queryParams.get('userId') || adminUserId;
   const displayName = queryParams.get('displayName') || adminDisplayName;
 
+  // ตั้ง Timeout 12 วินาที ป้องกันการค้างตลอดกาล
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+
   const isGet = !options.method || options.method === 'GET';
 
-  if (isGet) {
-    const url = `${GAS_DIRECT_URL}?action=${action}&userId=${encodeURIComponent(userId)}&displayName=${encodeURIComponent(displayName)}${queryString ? '&' + queryString : ''}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`GAS Direct HTTP Error: ${res.status}`);
-    return await res.json();
-  } else {
-    const reqPayload = {
-      action,
-      adminUserId: userId,
-      adminDisplayName: displayName,
-      userId,
-      displayName,
-      ...payload,
-    };
+  try {
+    if (isGet) {
+      const url = `${GAS_DIRECT_URL}?action=${action}&userId=${encodeURIComponent(userId)}&displayName=${encodeURIComponent(displayName)}${queryString ? '&' + queryString : ''}`;
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!res.ok) throw new Error(`GAS Direct HTTP Error: ${res.status}`);
+      return await res.json();
+    } else {
+      const reqPayload = {
+        action,
+        adminUserId: userId,
+        adminDisplayName: displayName,
+        userId,
+        displayName,
+        ...payload,
+      };
 
-    const res = await fetch(GAS_DIRECT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(reqPayload),
-    });
+      const res = await fetch(GAS_DIRECT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(reqPayload),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-    if (!res.ok) throw new Error(`GAS Direct HTTP Error: ${res.status}`);
-    return await res.json();
+      if (!res.ok) throw new Error(`GAS Direct HTTP Error: ${res.status}`);
+      return await res.json();
+    }
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error('การเชื่อมต่อใช้เวลานานเกินไป กรุณารีเฟรชหรือลองใหม่อีกครั้ง');
+    }
+    throw err;
   }
 }
 
 /**
- * Universal Fetch Request Wrapper (พร้อม Failover ไปยัง Direct GAS อัตโนมัติ)
+ * Universal Fetch Request Wrapper
+ * เมื่ออยู่บน Vercel / Production จะเรียก Google Apps Script โดยตรงเพื่อความเร็วสูงสุด
  */
 export async function apiRequest(endpoint, options = {}) {
+  const isLocal = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  // ถ้าอยู่บน Production (เช่น Vercel) ให้ยิงตรงเข้า Google Apps Script ทันที (เร็วและไม่ค้าง)
+  if (!isLocal) {
+    return await callDirectGas(endpoint, options);
+  }
+
+  // สำหรับ Local Development เท่านั้น (Express บน Port 5000)
   const url = `${API_BASE_URL}${endpoint}`;
 
   const headers = {
@@ -116,33 +141,18 @@ export async function apiRequest(endpoint, options = {}) {
     }
   } catch (e) {}
 
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
 
-    // หากพบ 404 จาก Proxy ให้สลับเป็น Direct GAS ทันที
-    if (response.status === 404) {
-      console.warn(`[API] 404 on ${url}, switching to Direct GAS...`);
-      return await callDirectGas(endpoint, options);
-    }
+  const data = await response.json();
 
-    const data = await response.json();
-
-    if (!response.ok || data.status === 'error') {
-      throw new Error(data.message || `API Error: ${response.status}`);
-    }
-
-    return data;
-  } catch (err) {
-    // ถ้า Network Error หรือ 404 ให้เรียก Direct GAS เป็น Fallback อัตโนมัติ
-    if (err.message && (err.message.includes('404') || err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
-      console.warn(`[API] Fallback to Direct GAS for ${endpoint}:`, err.message);
-      return await callDirectGas(endpoint, options);
-    }
-    throw err;
+  if (!response.ok || data.status === 'error') {
+    throw new Error(data.message || `API Error: ${response.status}`);
   }
+
+  return data;
 }
 
 export default apiRequest;
