@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>ระบบสั่งอาหารผ่าน LINE</title>
+  
+  <!-- Google Fonts: Prompt -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  
+  <!-- SweetAlert2 for Modern Alerts -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <!-- LINE LIFF SDK -->
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+  <style>
+    :root {
+      --primary: #06C755; /* LINE Brand Green */
+      --primary-dark: #05A044;
+      --primary-light: #E8F8EE;
+      --accent: #FF9800;
+      --accent-light: #FFF4E5;
+      --bg-color: #F6F8FA;
+      --card-bg: #FFFFFF;
+      --text-main: #1E293B;
+      --text-muted: #64748B;
+      --border-color: #E2E8F0;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.07);
+      --shadow-lg: 0 16px 36px rgba(6, 199, 85, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Prompt', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 16px;
+      padding-top: max(16px, env(safe-area-inset-top));
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+      background-image: radial-gradient(rgba(6, 199, 85, 0.08) 1px, transparent 1px), radial-gradient(rgba(6, 199, 85, 0.08) 1px, var(--bg-color) 1px);
+      background-size: 28px 28px;
+      background-position: 0 0, 14px 14px;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 460px;
+      margin: 0 auto;
+    }
+
+    /* Top Brand Bar */
+    .brand-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding: 0 4px;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 10px rgba(6, 199, 85, 0.25);
+    }
+
+    .brand-title {
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.2px;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      background: #FFFFFF;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--primary-dark);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--primary);
+      border-radius: 50%;
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 1; box-shadow: 0 0 0 0 rgba(6, 199, 85, 0.7); }
+      70% { transform: scale(1.1); opacity: 0.8; box-shadow: 0 0 0 7px rgba(6, 199, 85, 0); }
+      100% { transform: scale(0.9); opacity: 1; }
+    }
+
+    /* Main Card */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      padding: 22px 20px;
+      box-shadow: var(--shadow-md);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    /* User Profile Section */
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+      border-bottom: 1px dashed var(--border-color);
+    }
+
+    .avatar-wrapper {
+      position: relative;
+      width: 58px;
+      height: 58px;
+      flex-shrink: 0;
+    }
+
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2.5px solid #FFFFFF;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+      background-color: var(--border-color);
+    }
+
+    .avatar-badge {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      background: var(--primary);
+      color: white;
+      font-size: 10px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid white;
+    }
+
+    .user-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .user-greeting {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .user-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Round Info Banner */
+    .round-card {
+      background: linear-gradient(135deg, #F0FDF4, #DCFCE7);
+      border: 1px solid #BBF7D0;
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .round-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #166534;
+      font-weight: 600;
+    }
+
+    .round-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #15803D;
+      background: #FFFFFF;
+      padding: 4px 10px;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Form Elements */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .form-label i {
+      color: var(--primary);
+      margin-right: 6px;
+    }
+
+    .custom-select-wrapper {
+      position: relative;
+    }
+
+    .form-control, .form-select {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 14.5px;
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background-color: #FAFAFA;
+      color: var(--text-main);
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .form-select {
+      appearance: none;
+      -webkit-appearance: none;
+      padding-right: 40px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .select-arrow {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .form-control:focus, .form-select:focus {
+      background-color: #FFFFFF;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(6, 199, 85, 0.12);
+    }
+
+    /* Visual Food Menu Picker & Cards */
+    .visual-menu-section {
+      margin-bottom: 16px;
+    }
+
+    .visual-menu-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .visual-menu-list {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      padding-top: 2px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .visual-menu-list::-webkit-scrollbar {
+      display: none;
+    }
+
+    .visual-menu-card {
+      flex: 0 0 125px;
+      background: white;
+      border-radius: var(--radius-md);
+      border: 1.5px solid var(--border-color);
+      overflow: hidden;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.22s ease;
+      text-align: left;
+      user-select: none;
+    }
+
+    .visual-menu-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+      border-color: #CBD5E1;
+    }
+
+    .visual-menu-card.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(6, 199, 85, 0.25), 0 6px 16px rgba(6, 199, 85, 0.15);
+      background: #F0FDF4;
+    }
+
+    .visual-card-img-wrap {
+      width: 100%;
+      height: 85px;
+      background: #F1F5F9;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .visual-card-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+
+    .visual-menu-card:hover .visual-card-img {
+      transform: scale(1.06);
+    }
+
+    .visual-card-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94A3B8;
+      font-size: 26px;
+      background: #F8FAFC;
+    }
+
+    .visual-card-body {
+      padding: 8px 10px;
+    }
+
+    .visual-card-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+
+    .visual-card-price {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+
+    /* Selected Food Image Display Card */
+    .food-preview-card {
+      background: white;
+      border-radius: var(--radius-md);
+      border: 1.5px solid #E2E8F0;
+      overflow: hidden;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow-sm);
+      animation: foodFadeIn 0.25s ease;
+    }
+
+    @keyframes foodFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .food-preview-img-wrapper {
+      width: 100%;
+      height: 175px;
+      position: relative;
+      background: #F1F5F9;
+      overflow: hidden;
+    }
+
+    .food-preview-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .food-preview-price-tag {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(6px);
+      color: #34D399;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 14.5px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+
+    .food-preview-info {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .food-preview-name {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .food-preview-status {
+      font-size: 11px;
+      color: var(--primary-dark);
+      background: var(--primary-light);
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    /* Quantity Stepper */
+    .quantity-stepper {
+      display: flex;
+      align-items: center;
+      background-color: #F8FAFC;
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      height: 48px;
+    }
+
+    .stepper-btn {
+      width: 50px;
+      height: 100%;
+      border: none;
+      background: #FFFFFF;
+      color: var(--text-main);
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease;
+    }
+
+    .stepper-btn:active {
+      background: #E2E8F0;
+    }
+
+    .stepper-input {
+      flex: 1;
+      height: 100%;
+      border: none;
+      background: transparent;
+      text-align: center;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-main);
+      outline: none;
+    }
+
+    /* Quick Note Chips */
+    .quick-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .chip-btn {
+      background: #F1F5F9;
+      border: 1px solid #E2E8F0;
+      color: #475569;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .chip-btn:active, .chip-btn:hover {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+
+    /* Summary Bar */
+    .summary-card {
+      background: #F8FAFC;
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      border: 1px dashed var(--border-color);
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .summary-row.total {
+      margin-bottom: 0;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-color);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .price-value {
+      color: var(--primary-dark);
+      font-weight: 700;
+      font-size: 20px;
+    }
+
+    /* Submit Button */
+    .btn-submit {
+      width: 100%;
+      padding: 14px 20px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #FFFFFF;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: var(--shadow-lg);
+      transition: all 0.2s ease;
+    }
+
+    .btn-submit:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+
+    .btn-submit:active {
+      transform: translateY(1px);
+      box-shadow: 0 6px 16px rgba(6, 199, 85, 0.2);
+    }
+
+    .btn-submit:disabled {
+      background: #CBD5E1;
+      box-shadow: none;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Loading Screen */
+    .loading-container {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #E2E8F0;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 15px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .loading-subtext {
+      font-size: 12px;
+      color: #94A3B8;
+      margin-top: 6px;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- App Header -->
+    <header class="brand-header">
+      <div class="brand-logo">
+        <div class="brand-icon">
+          <i class="fa-solid fa-utensils"></i>
+        </div>
+        <div>
+          <h1 class="brand-title">LINE Food Order</h1>
+          <p class="brand-subtitle">สั่งอาหารสะดวก อัปเดตเรียลไทม์</p>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <a id="adminEntryBtn" href="admin.html" style="display: none; font-size: 11.5px; background: #1E293B; color: white; text-decoration: none; padding: 5px 11px; border-radius: 20px; font-weight: 500; align-items: center; gap: 5px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+          <i class="fa-solid fa-gear"></i> จัดการระบบ
+        </a>
+        <div class="status-badge">
+          <div class="pulse-dot"></div>
+          <span>เปิดรับออเดอร์</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Loading State -->
+    <div id="loadingView" class="card loading-container">
+      <div class="spinner"></div>
+      <p class="loading-text">กำลังเชื่อมต่อ LINE & Google Sheets...</p>
+      <p class="loading-subtext">กรุณารอสักครู่ ระบบกำลังโหลดข้อมูลเมนู</p>
+    </div>
+
+    <!-- Main Order Form (Hidden while loading) -->
+    <main id="appView" class="card" style="display: none;">
+      
+      <!-- User Profile Header -->
+      <section class="user-profile">
+        <div class="avatar-wrapper">
+          <img id="userAvatar" class="avatar-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2305A044'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M12 14c-4.42 0-8 1.79-8 4v2h16v-2c0-2.21-3.58-4-8-4z'/%3E%3C/svg%3E" alt="User Avatar">
+          <div class="avatar-badge">
+            <i class="fa-brands fa-line"></i>
+          </div>
+        </div>
+        <div class="user-info">
+          <div class="user-greeting">สวัสดีคุณ</div>
+          <div id="userName" class="user-name">ผู้สั่งอาหาร</div>
+        </div>
+      </section>
+
+      <!-- Round Banner -->
+      <div class="round-card">
+        <div class="round-title">
+          <i class="fa-regular fa-clock"></i>
+          <span>รอบการสั่งซื้อปัจจุบัน</span>
+        </div>
+        <div id="roundText" class="round-name">กำลังโหลด...</div>
+      </div>
+
+      <!-- Order Form -->
+      <form id="orderForm" onsubmit="return false;">
+        
+        <!-- Visual Menu Quick Picker (แตะเลือกจากรูปภาพ) -->
+        <div id="visualMenuSection" class="visual-menu-section" style="display: none;">
+          <div class="visual-menu-label">
+            <span><i class="fa-solid fa-fire-burner" style="color: #FF9800;"></i> แตะเลือกเมนูจากภาพ:</span>
+          </div>
+          <div id="visualMenuList" class="visual-menu-list">
+            <!-- Visual menu cards dynamically injected -->
+          </div>
+        </div>
+
+        <!-- Selected Food Image Display Card (รูปภาพเมนูที่เลือก) -->
+        <div id="selectedFoodCard" class="food-preview-card" style="display: none;">
+          <div class="food-preview-img-wrapper">
+            <img id="foodPreviewImg" src="" alt="Menu Image" class="food-preview-img">
+            <div class="food-preview-price-tag" id="foodPreviewPriceTag">฿0</div>
+          </div>
+          <div class="food-preview-info">
+            <div class="food-preview-name" id="foodPreviewName">ชื่อเมนู</div>
+            <div class="food-preview-status"><i class="fa-solid fa-circle-check"></i> พร้อมสั่งปรุงสดใหม่</div>
+          </div>
+        </div>
+
+        <!-- Menu Select -->
+        <div class="form-group">
+          <label class="form-label" for="menuSelect">
+            <span><i class="fa-solid fa-bowl-food"></i> เลือกเมนูอาหาร</span>
+            <span id="menuPriceBadge" style="font-size: 12px; color: var(--primary-dark); font-weight: 500;"></span>
+          </label>
+          <div class="custom-select-wrapper">
+            <select id="menuSelect" class="form-select" required onchange="onMenuChange()">
+              <option value="">-- กรุณาเลือกรายการเมนู --</option>
+            </select>
+            <div class="select-arrow">
+              <i class="fa-solid fa-chevron-down"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quantity Stepper -->
+        <div class="form-group">
+          <label class="form-label" for="quantity">
+            <span><i class="fa-solid fa-hashtag"></i> จำนวน (กล่อง / ห่อ)</span>
+          </label>
+          <div class="quantity-stepper">
+            <button type="button" class="stepper-btn" onclick="adjustQuantity(-1)">
+              <i class="fa-solid fa-minus"></i>
+            </button>
+            <input type="number" id="quantity" class="stepper-input" value="1" min="1" max="99" readonly>
+            <button type="button" class="stepper-btn" onclick="adjustQuantity(1)">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Phone & Department -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px;">
+          <div>
+            <label class="form-label" for="phoneInput" style="font-size: 12.5px;">
+              <span><i class="fa-solid fa-phone"></i> เบอร์โทรศัพท์</span>
+            </label>
+            <input type="tel" id="phoneInput" class="form-control" placeholder="เช่น 0812345678" style="padding: 10px 12px; font-size: 13.5px;">
+          </div>
+          <div>
+            <label class="form-label" for="deptInput" style="font-size: 12.5px;">
+              <span><i class="fa-solid fa-building"></i> แผนก / โต๊ะ</span>
+            </label>
+            <input type="text" id="deptInput" class="form-control" placeholder="เช่น IT / บัญชี" style="padding: 10px 12px; font-size: 13.5px;">
+          </div>
+        </div>
+
+        <!-- Notes / Special Instructions -->
+        <div class="form-group">
+          <label class="form-label" for="noteInput">
+            <span><i class="fa-regular fa-comment-dots"></i> หมายเหตุเพิ่มเติม (ถ้ามี)</span>
+          </label>
+          <input type="text" id="noteInput" class="form-control" placeholder="เช่น ไม่เผ็ด, พิเศษ, ไม่ใส่ผัก, แยกน้ำ">
+          
+          <!-- Quick Click Chips -->
+          <div class="quick-chips">
+            <button type="button" class="chip-btn" onclick="addChipNote('ไม่เผ็ด')">+ ไม่เผ็ด</button>
+            <button type="button" class="chip-btn" onclick="addChipNote('เผ็ดน้อย')">+ เผ็ดน้อย</button>
+            <button type="button" class="chip-btn" onclick="addChipNote('พิเศษ')">+ พิเศษ</button>
+            <button type="button" class="chip-btn" onclick="addChipNote('ไม่ใส่ผัก')">+ ไม่ใส่ผัก</button>
+            <button type="button" class="chip-btn" onclick="addChipNote('แยกน้ำ')">+ แยกน้ำ</button>
+          </div>
+        </div>
+
+        <!-- Price Summary Box -->
+        <div class="summary-card">
+          <div class="summary-row">
+            <span>ราคาต่อหน่วย</span>
+            <span id="unitPriceText">-</span>
+          </div>
+          <div class="summary-row">
+            <span>จำนวน</span>
+            <span id="qtySummaryText">1 รายการ</span>
+          </div>
+          <div class="summary-row total">
+            <span>ยอดรวมทั้งสิ้น</span>
+            <span class="price-value" id="totalPriceText">฿0</span>
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <button type="button" id="submitBtn" class="btn-submit" onclick="confirmAndSubmitOrder()">
+          <i class="fa-solid fa-cart-shopping"></i>
+          <span>ยืนยันการสั่งอาหาร</span>
+        </button>
+
+      </form>
+    </main>
+
+  </div>
+
+  <script>
+    /**
+     * ==========================================================
+     * การตั้งค่าระบบ (Configuration)
+     * ==========================================================
+     */
+    const LIFF_ID = "2011625055-XnlJJcQp"; // ใส่ LIFF ID จาก LINE Developers Console
+    
+    // ใส่ Web App URL ของ Google Apps Script (ที่ลงท้ายด้วย /exec)
+    const API_URL = "https://script.google.com/macros/s/AKfycbwdD1v1L2luhHfejCEXaloSQMjz30HIx4wqCiftc7xS0Ja9TRxXWuy1Y-q686IjJPiZlw/exec";
+
+    // ตัวแปร State ของระบบ (บังคับใช้ข้อมูลจริงจาก LINE เท่านั้น)
+    let userProfile = null;
+    let currentRound = "";
+    let menuList = [];
+    let selectedMenu = null;
+
+    /**
+     * ฟังก์ชันเริ่มต้นระบบ (Main Entry Point)
+     * บังคับให้ Login ผ่าน LINE จริงๆ ทุกครั้ง
+     */
+    async function main() {
+      try {
+        updateLoadingStatus("กำลังเชื่อมต่อ LINE...", "กำลังตรวจสอบการเข้าสู่ระบบ");
+
+        // ตรวจสอบกรณีเปิดไฟล์ตรงๆ จากเครื่องคอมพิวเตอร์ (file://)
+        if (window.location.protocol === 'file:') {
+          throw new Error("คุณกำลังเปิดไฟล์ผ่าน file:// บนเครื่องคอมพิวเตอร์ ซึ่งระบบความปลอดภัยของ LINE ไม่อนุญาตให้ล็อกอินได้ กรุณานำไฟล์ index.html ขึ้นโฮสต์จริง (เช่น Vercel) หรือรันผ่าน Web Server");
+        }
+
+        // 1. ตรวจสอบการเชื่อมต่อ LIFF SDK
+        await liff.init({ liffId: LIFF_ID });
+
+        // 2. บังคับตรวจสอบสถานะการ Login ทุกครั้ง
+        if (!liff.isLoggedIn()) {
+          updateLoadingStatus("กำลังนำคุณเข้าสู่ระบบ LINE...", "กรุณารอสักครู่ ระบบกำลังเปิดหน้า Login");
+          // เรียก liff.login() โดยไม่ระบุ redirectUri เพื่อให้ใช้ Endpoint URL ของ LINE Developers อัตโนมัติ (ป้องกัน Error 400)
+          liff.login();
+          return;
+        }
+
+        // 3. ดึงข้อมูลโปรไฟล์ผู้ใช้จริงจาก LINE
+        userProfile = await liff.getProfile();
+        if (!userProfile || !userProfile.userId) {
+          throw new Error("ไม่สามารถดึงข้อมูลโปรไฟล์ LINE ได้ กรุณาลองใหม่อีกครั้ง");
+        }
+
+        // 4. โหลดข้อมูลเริ่มต้นและเปิดหน้าสั่งอาหารทันที (Instant Load 0.1 วินาที ไม่ต้องรอค้าง)
+        initMenuData();
+        renderUI();
+
+        // 5. ดึงข้อมูลอัปเดตล่าสุดจาก Google Apps Script ในพื้นหลัง
+        syncLatestData();
+
+        // 6. ตรวจสอบว่าผู้ใช้คนนี้มีสิทธิ์ Admin หรือไม่ (ถ้ามีจะแสดงปุ่มลัดไปหน้าหลังบ้าน)
+        checkAdminStatus(userProfile.userId);
+
+      } catch (error) {
+        console.error("Main initialization error:", error);
+        renderLoginError(error.message);
+      }
+    }
+
+    /**
+     * อัปเดตข้อความบนหน้า Loading
+     */
+    function updateLoadingStatus(title, subtitle) {
+      const titleEl = document.querySelector('.loading-text');
+      const subtitleEl = document.querySelector('.loading-subtext');
+      if (titleEl) titleEl.innerText = title;
+      if (subtitleEl) subtitleEl.innerText = subtitle;
+    }
+
+    /**
+     * แสดงหน้าต่างข้อผิดพลาดกรณีล็อกอินไม่สำเร็จ พร้อมปุ่มกดล็อกอินใหม่
+     */
+    function renderLoginError(msg) {
+      const loadingView = document.getElementById('loadingView');
+      loadingView.innerHTML = `
+        <div style="color: #EF4444; font-size: 44px; margin-bottom: 12px;">
+          <i class="fa-solid fa-circle-exclamation"></i>
+        </div>
+        <h3 style="font-size: 17px; font-weight: 700; color: #1E293B; margin-bottom: 8px;">จำเป็นต้องเข้าสู่ระบบ LINE</h3>
+        <p style="font-size: 13px; color: #64748B; margin-bottom: 20px; line-height: 1.5;">${msg || 'กรุณาเข้าสู่ระบบ LINE เพื่อยืนยันตัวตนก่อนดำเนินการสั่งอาหาร'}</p>
+        <button type="button" onclick="handleForceLogin()" class="btn-submit" style="max-width: 260px; margin: 0 auto; padding: 12px 18px;">
+          <i class="fa-brands fa-line" style="font-size: 20px;"></i>
+          <span>เข้าสู่ระบบด้วย LINE</span>
+        </button>
+      `;
+    }
+
+    function handleForceLogin() {
+      if (typeof liff !== "undefined" && liff.login) {
+        liff.login();
+      } else {
+        window.location.reload();
+      }
+    }
+
+    /**
+     * โหลดข้อมูลเมนูจากแคช หรือค่าเริ่มต้นจากชีท เพื่อให้หน้าจอเปิดได้ทันที
+     */
+    function initMenuData() {
+      try {
+        const cached = localStorage.getItem('liff_food_order_cache');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.round && parsed.menus && parsed.menus.length > 0) {
+            currentRound = parsed.round;
+            menuList = parsed.menus;
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("Cache read error:", e);
+      }
+
+      // ค่าเริ่มต้นจาก Google Sheets ล่าสุด
+      currentRound = "รอบเที่ยง 16 ก.ย.";
+      menuList = [
+        { id: 1, name: "ข้าวกะเพราหมูกรอบ", price: 50, imageUrl: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600&auto=format&fit=crop&q=80" },
+        { id: 2, name: "ข้าวผัดหมู", price: 45, imageUrl: "https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=600&auto=format&fit=crop&q=80" }
+      ];
+    }
+
+    /**
+     * ซิงค์ข้อมูลล่าสุดจาก Google Apps Script ในพื้นหลัง
+     */
+    async function syncLatestData() {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+        const response = await fetch(API_URL, {
+          method: 'GET',
+          redirect: 'follow',
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (data.status === "success" && data.menus && data.menus.length > 0) {
+          currentRound = data.round || currentRound;
+          menuList = data.menus;
+
+          // บันทึกลงแคช
+          localStorage.setItem('liff_food_order_cache', JSON.stringify({
+            round: currentRound,
+            menus: menuList
+          }));
+
+          // อัปเดตรอบและรายการเมนูบนหน้าจอแบบเรียลไทม์
+          const roundEl = document.getElementById('roundText');
+          if (roundEl) roundEl.innerText = currentRound;
+          updateMenuOptions();
+        }
+      } catch (err) {
+        console.warn("Background sync info:", err.message);
+      }
+    }
+
+    /**
+     * ตรวจสอบสิทธิ์ผู้ดูแลเพื่อแสดงปุ่มลัด
+     */
+    async function checkAdminStatus(userId) {
+      try {
+        const res = await fetch(`${API_URL}?action=checkAdmin&userId=${encodeURIComponent(userId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.isAdmin) {
+            const btn = document.getElementById('adminEntryBtn');
+            if (btn) btn.style.display = 'inline-flex';
+          }
+        }
+      } catch (e) {
+        // silent fail
+      }
+    }
+
+    /**
+     * อัปเดตตัวเลือกเมนูใน Dropdown และการ์ดเลือกเมนู
+     */
+    function updateMenuOptions() {
+      const select = document.getElementById('menuSelect');
+      if (!select) return;
+
+      const currentVal = select.value;
+      select.innerHTML = '<option value="">-- กรุณาเลือกรายการเมนู --</option>';
+
+      menuList.forEach((menu, index) => {
+        const opt = document.createElement('option');
+        opt.value = menu.name;
+        opt.dataset.price = menu.price;
+        opt.dataset.imageUrl = menu.imageUrl || "";
+        opt.dataset.index = index;
+        opt.text = `${menu.name} - ฿${menu.price}`;
+        if (menu.name === currentVal) opt.selected = true;
+        select.appendChild(opt);
+      });
+
+      renderVisualMenuList();
+
+      if (!currentVal) {
+        onMenuChange();
+      }
+    }
+
+    /**
+     * เรนเดอร์การ์ดรูปภาพเมนูด่วน (Visual Menu Cards)
+     */
+    function renderVisualMenuList() {
+      const section = document.getElementById('visualMenuSection');
+      const list = document.getElementById('visualMenuList');
+      if (!section || !list) return;
+
+      if (!menuList || menuList.length === 0) {
+        section.style.display = "none";
+        return;
+      }
+
+      section.style.display = "block";
+      list.innerHTML = "";
+
+      menuList.forEach((menu, idx) => {
+        const card = document.createElement('div');
+        const isSelected = selectedMenu && selectedMenu.name === menu.name;
+        card.className = `visual-menu-card ${isSelected ? 'active' : ''}`;
+        card.id = `visualCard_${idx}`;
+        card.onclick = () => selectMenuByName(menu.name);
+
+        let imgMarkup = '';
+        if (menu.imageUrl && menu.imageUrl.trim() !== "") {
+          imgMarkup = `<img src="${escapeHtml(menu.imageUrl.trim())}" class="visual-card-img" alt="${escapeHtml(menu.name)}" onerror="this.parentElement.innerHTML='<div class=\\'visual-card-placeholder\\'><i class=\\'fa-solid fa-bowl-food\\'></i></div>'">`;
+        } else {
+          imgMarkup = `<div class="visual-card-placeholder"><i class="fa-solid fa-bowl-food"></i></div>`;
+        }
+
+        card.innerHTML = `
+          <div class="visual-card-img-wrap">
+            ${imgMarkup}
+          </div>
+          <div class="visual-card-body">
+            <div class="visual-card-title">${escapeHtml(menu.name)}</div>
+            <div class="visual-card-price">฿${menu.price}</div>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    /**
+     * เลือกเมนูผ่านการแตะที่รูปภาพการ์ด
+     */
+    function selectMenuByName(menuName) {
+      const select = document.getElementById('menuSelect');
+      if (select) {
+        select.value = menuName;
+        onMenuChange();
+      }
+    }
+
+    /**
+     * นำข้อมูลไปแสดงผลบนหน้าจอ (Render UI)
+     */
+    function renderUI() {
+      // 1. ข้อมูลผู้ใช้จริงจาก LINE
+      document.getElementById('userName').innerText = userProfile.displayName || "ผู้สั่งอาหาร";
+      if (userProfile.pictureUrl) {
+        document.getElementById('userAvatar').src = userProfile.pictureUrl;
+      }
+
+      // 2. รอบปัจจุบัน
+      document.getElementById('roundText').innerText = currentRound;
+
+      // 3. แสดงรายการเมนู
+      updateMenuOptions();
+
+      // ดึงเบอร์โทรและแผนกที่เคยบันทึกไว้ในเครื่อง
+      try {
+        const savedPhone = localStorage.getItem('user_order_phone');
+        const savedDept = localStorage.getItem('user_order_dept');
+        if (savedPhone) document.getElementById('phoneInput').value = savedPhone;
+        if (savedDept) document.getElementById('deptInput').value = savedDept;
+      } catch (e) {}
+
+      // ซ่อนหน้า Loading และแสดงหน้าสั่งอาหารทันที
+      document.getElementById('loadingView').style.display = 'none';
+      document.getElementById('appView').style.display = 'block';
+
+      updateSummary();
+    }
+
+    /**
+     * เหตุการณ์เมื่อเปลี่ยนเมนูใน Dropdown หรือการ์ด
+     */
+    function onMenuChange() {
+      const select = document.getElementById('menuSelect');
+      const selectedIndex = select.selectedIndex;
+      const previewCard = document.getElementById('selectedFoodCard');
+      const previewImg = document.getElementById('foodPreviewImg');
+      const previewName = document.getElementById('foodPreviewName');
+      const previewPrice = document.getElementById('foodPreviewPriceTag');
+      
+      if (selectedIndex > 0) {
+        const option = select.options[selectedIndex];
+        const price = parseFloat(option.dataset.price) || 0;
+        const imageUrl = option.dataset.imageUrl || "";
+        selectedMenu = {
+          name: option.value,
+          price: price,
+          imageUrl: imageUrl
+        };
+        document.getElementById('menuPriceBadge').innerText = `฿${price} / จาน`;
+
+        // แสดงรูปภาพเมนูที่เลือกในการ์ดพรีวิว
+        if (previewCard) {
+          if (imageUrl && imageUrl.trim() !== "") {
+            previewImg.src = imageUrl;
+            previewName.innerText = selectedMenu.name;
+            previewPrice.innerText = `฿${price}`;
+            previewCard.style.display = "block";
+          } else {
+            previewCard.style.display = "none";
+          }
+        }
+      } else {
+        selectedMenu = null;
+        document.getElementById('menuPriceBadge').innerText = "";
+        if (previewCard) previewCard.style.display = "none";
+      }
+
+      // ไฮไลต์การ์ดที่ถูกเลือกใน Visual Menu List
+      document.querySelectorAll('.visual-menu-card').forEach(c => c.classList.remove('active'));
+      if (selectedMenu) {
+        const foundIdx = menuList.findIndex(m => m.name === selectedMenu.name);
+        if (foundIdx !== -1) {
+          const activeCard = document.getElementById(`visualCard_${foundIdx}`);
+          if (activeCard) {
+            activeCard.classList.add('active');
+            activeCard.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+          }
+        }
+      }
+
+      updateSummary();
+    }
+
+    /**
+     * ป้องกัน XSS
+     */
+    function escapeHtml(text) {
+      if (text === null || text === undefined) return "";
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    /**
+     * ปรับจำนวน (+ / -)
+     */
+    function adjustQuantity(delta) {
+      const qtyInput = document.getElementById('quantity');
+      let currentQty = parseInt(qtyInput.value, 10) || 1;
+      currentQty += delta;
+      if (currentQty < 1) currentQty = 1;
+      if (currentQty > 99) currentQty = 99;
+      qtyInput.value = currentQty;
+
+      updateSummary();
+    }
+
+    /**
+     * เพิ่มข้อความหมายเหตุด่วน (Quick Chips)
+     */
+    function addChipNote(text) {
+      const noteInput = document.getElementById('noteInput');
+      const currentVal = noteInput.value.trim();
+      if (!currentVal) {
+        noteInput.value = text;
+      } else if (!currentVal.includes(text)) {
+        noteInput.value = currentVal + ", " + text;
+      }
+      noteInput.focus();
+    }
+
+    /**
+     * อัปเดตแถบสรุปราคา
+     */
+    function updateSummary() {
+      const qty = parseInt(document.getElementById('quantity').value, 10) || 1;
+      const unitPrice = selectedMenu ? selectedMenu.price : 0;
+      const total = unitPrice * qty;
+
+      document.getElementById('unitPriceText').innerText = selectedMenu ? `฿${unitPrice}` : "-";
+      document.getElementById('qtySummaryText').innerText = `${qty} รายการ`;
+      document.getElementById('totalPriceText').innerText = `฿${total.toLocaleString()}`;
+
+      const submitBtn = document.getElementById('submitBtn');
+      if (selectedMenu) {
+        submitBtn.innerHTML = `<i class="fa-solid fa-cart-shopping"></i> ยืนยันการสั่งอาหาร (฿${total.toLocaleString()})`;
+      } else {
+        submitBtn.innerHTML = `<i class="fa-solid fa-cart-shopping"></i> กรุณาเลือกเมนู`;
+      }
+    }
+
+    /**
+     * ยืนยันและส่งออเดอร์
+     */
+    async function confirmAndSubmitOrder() {
+      // ตรวจสอบว่ามีข้อมูลโปรไฟล์ LINE หรือไม่
+      if (!userProfile || !userProfile.userId) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'ยังไม่ได้เข้าสู่ระบบ LINE',
+          text: 'กรุณาเข้าสู่ระบบ LINE ก่อนดำเนินการสั่งซื้อครับ',
+          confirmButtonColor: '#06C755'
+        }).then(() => {
+          liff.login();
+        });
+        return;
+      }
+
+      if (!selectedMenu) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'ยังไม่ได้เลือกเมนู',
+          text: 'กรุณาเลือกเมนูอาหารก่อนกดสั่งซื้อครับ',
+          confirmButtonColor: '#06C755'
+        });
+        return;
+      }
+
+      const qty = parseInt(document.getElementById('quantity').value, 10) || 1;
+      const note = document.getElementById('noteInput').value.trim();
+      const total = selectedMenu.price * qty;
+
+      // ป๊อปอัปยืนยันการสั่งอาหาร
+      const confirmResult = await Swal.fire({
+        title: 'ยืนยันการสั่งซื้อ?',
+        html: `
+          <div style="text-align: left; font-size: 14px; background: #F8FAFC; padding: 14px; border-radius: 10px;">
+            <p><strong>ผู้สั่ง:</strong> ${userProfile.displayName}</p>
+            <p><strong>เมนู:</strong> ${selectedMenu.name}</p>
+            <p><strong>จำนวน:</strong> ${qty} กล่อง/ห่อ</p>
+            <p><strong>หมายเหตุ:</strong> ${note || '-'}</p>
+            <hr style="margin: 8px 0; border: 0; border-top: 1px solid #E2E8F0;">
+            <p style="font-size: 16px; color: #05A044;"><strong>ยอดรวม:</strong> ฿${total.toLocaleString()}</p>
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'ยืนยันสั่งเลย',
+        cancelButtonText: 'แก้ไข',
+        confirmButtonColor: '#06C755',
+        cancelButtonColor: '#94A3B8',
+        reverseButtons: true
+      });
+
+      if (!confirmResult.isConfirmed) {
+        return;
+      }
+
+      // เริ่มต้นส่งข้อมูล
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึกข้อมูล...';
+
+      const phone = document.getElementById('phoneInput').value.trim();
+      const department = document.getElementById('deptInput').value.trim();
+
+      // บันทึกค่าไว้ใน LocalStorage เผื่อการสั่งครั้งต่อไป
+      try {
+        if (phone) localStorage.setItem('user_order_phone', phone);
+        if (department) localStorage.setItem('user_order_dept', department);
+      } catch (e) {}
+
+      const orderPayload = {
+        action: "order",
+        round: currentRound,
+        userId: userProfile.userId,
+        displayName: userProfile.displayName,
+        pictureUrl: userProfile.pictureUrl || "",
+        statusMessage: userProfile.statusMessage || "",
+        phone: phone || "-",
+        department: department || "-",
+        menuName: selectedMenu.name,
+        quantity: qty,
+        note: note || "-"
+      };
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8' // ป้องกัน CORS Preflight rejection ใน Google Apps Script
+          },
+          body: JSON.stringify(orderPayload)
+        });
+
+        // ตรวจสอบการตอบกลับ
+        await Swal.fire({
+          icon: 'success',
+          title: 'บันทึกออเดอร์สำเร็จ!',
+          html: `ระบบได้รับออเดอร์ <b>${selectedMenu.name}</b> เรียบร้อยแล้ว<br><small style="color:#64748B;">หน้าต่างจะปิดลงอัตโนมัติ</small>`,
+          timer: 2500,
+          timerProgressBar: true,
+          showConfirmButton: false
+        });
+
+        // ปิดหน้าต่าง LINE LIFF
+        if (typeof liff !== "undefined" && liff.isInClient && liff.isInClient()) {
+          liff.closeWindow();
+        } else {
+          // หากทดสอบบนเบราว์เซอร์ปกติ ให้รีเซ็ตฟอร์ม
+          document.getElementById('orderForm').reset();
+          selectedMenu = null;
+          document.getElementById('quantity').value = 1;
+          updateSummary();
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fa-solid fa-cart-shopping"></i> กรุณาเลือกเมนู';
+        }
+
+      } catch (err) {
+        console.error("Order submission error:", err);
+        Swal.fire({
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาดในการสั่งซื้อ',
+          text: err.message || 'โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่อีกครั้ง',
+          confirmButtonColor: '#06C755'
+        });
+        submitBtn.disabled = false;
+        updateSummary();
+      }
+    }
+
+    // เริ่มทำงานเมื่อเอกสารโหลดเสร็จ
+    window.addEventListener('DOMContentLoaded', main);
+  </script>
+</body>
+</html>
