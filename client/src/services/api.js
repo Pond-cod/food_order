@@ -80,9 +80,9 @@ export async function callDirectGas(endpoint, options = {}) {
   if (userId) queryParams.set('userId', userId);
   if (displayName) queryParams.set('displayName', displayName);
 
-  // ตั้ง Timeout 12 วินาที ป้องกันการค้างตลอดกาล
+  // ตั้ง Timeout 35 วินาที ป้องกันกรณีเน็ตหลุดหรือค้าง ขณะที่ให้เวลา GAS Cold-start เพียงพอ
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  const timeoutId = setTimeout(() => controller.abort(), 35000);
 
   const isGet = !options.method || options.method === 'GET';
 

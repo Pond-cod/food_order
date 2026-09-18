@@ -111,6 +111,13 @@ function doGet(e) {
         });
       }
 
+      const scriptCache = CacheService.getScriptCache();
+      const cachedDash = scriptCache.get("admin_dash_cache");
+      if (cachedDash) {
+        return ContentService.createTextOutput(cachedDash)
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
       // 1. รอบปัจจุบัน
       let currentRound = "รอบปกติ";
       const settingsSheet = ss.getSheetByName("Settings");
@@ -217,7 +224,7 @@ function doGet(e) {
         }
       }
 
-      return jsonResponse({
+      const dashResponse = {
         status: "success",
         data: {
           currentRound: currentRound,
@@ -227,7 +234,15 @@ function doGet(e) {
           admins: admins,
           adminRole: adminCheck.role
         }
-      });
+      };
+
+      const dashString = JSON.stringify(dashResponse);
+      try {
+        scriptCache.put("admin_dash_cache", dashString, 15);
+      } catch (e) {}
+
+      return ContentService.createTextOutput(dashString)
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
     // -------------------------------------------------------------
@@ -319,9 +334,10 @@ function doPost(e) {
 
     const action = payload.action || "order"; // ถ้าไม่ระบุ action ถือเป็นการสั่งอาหารของลูกค้า
 
-    // เคลียร์ Cache ทันทีเมื่อมีคำสั่งเขียน/แก้ไขข้อมูล เพื่อให้ลูกค้าเห็นข้อมูลล่าสุด
+    // เคลียร์ Cache ทันทีเมื่อมีคำสั่งเขียน/แก้ไขข้อมูล เพื่อให้ลูกค้าและแอดมินเห็นข้อมูลล่าสุดทันที
     try {
       CacheService.getScriptCache().remove("appData_fast_cache");
+      CacheService.getScriptCache().remove("admin_dash_cache");
     } catch (cacheErr) {}
 
     // -------------------------------------------------------------
@@ -555,21 +571,28 @@ function doPost(e) {
         }
       }
 
-      // 2. ปรับสถานะเปิด/ปิดขาย (Available / Sold Out) ของแต่ละเมนูตามที่ติ๊กเลือก
+      // 2. ปรับสถานะเปิด/ปิดขาย (Available / Sold Out) แบบ Batch Write ครั้งเดียว (เสร็จใน 0.1 วินาที)
       const menuSheet = ss.getSheetByName("Menu") || ss.getSheets()[0];
       if (menuSheet && menuStatusMap && Object.keys(menuStatusMap).length > 0) {
         const lastRow = menuSheet.getLastRow();
-        for (let r = 2; r <= lastRow; r++) {
-          if (menuStatusMap.hasOwnProperty(r)) {
-            const isAvailable = !!menuStatusMap[r];
-            menuSheet.getRange(r, 3).setValue(isAvailable ? "Available" : "Sold Out");
+        if (lastRow >= 2) {
+          const numRows = lastRow - 1;
+          const statusRange = menuSheet.getRange(2, 3, numRows, 1);
+          const statusValues = statusRange.getValues();
+          for (let i = 0; i < numRows; i++) {
+            const r = i + 2;
+            if (menuStatusMap.hasOwnProperty(r)) {
+              statusValues[i][0] = menuStatusMap[r] ? "Available" : "Sold Out";
+            }
           }
+          statusRange.setValues(statusValues);
         }
       }
 
       // ล้าง Cache เพื่อให้ลูกค้าเห็นรอบและเมนูใหม่ทันที
       try {
         CacheService.getScriptCache().remove("appData_fast_cache");
+        CacheService.getScriptCache().remove("admin_dash_cache");
       } catch (cErr) {}
 
       return jsonResponse({

@@ -82,28 +82,35 @@ export default function AdminPage({ onNavigateOrder }) {
   const [activeCustomerOrder, setActiveCustomerOrder] = useState(null);
   const [zoomImage, setZoomImage] = useState(null);
 
-  const loadDashboard = useCallback(async () => {
+  const loadDashboard = useCallback(async (isSilent = false) => {
     try {
-      if (!dashboardData) setIsLoading(true);
+      if (!isSilent) {
+        setIsLoading((prev) => (!localStorage.getItem('cached_admin_dashboard')));
+      }
       const res = await getAdminDashboard();
-      if (res.status === 'success') {
+      if (res && res.status === 'success') {
         setDashboardData(res.data);
         try {
           localStorage.setItem('cached_admin_dashboard', JSON.stringify(res.data));
         } catch (e) {}
       }
     } catch (err) {
-      Swal.fire({
-        icon: 'error',
-        title: 'เชื่อมต่อล้มเหลว',
-        text: err.message.includes('404')
-          ? 'URL ของ Google Apps Script Web App เปลี่ยนไป (HTTP 404) กรุณาคัดลอก Web App URL ใหม่จากหน้า Deploy มาใส่ในระบบ'
-          : err.message,
-      });
+      console.warn('Dashboard fetch notice:', err);
+      // หากยังไม่มีข้อมูลแคชในหน้าจอเลย ถึงจะแสดง Error Dialog
+      const hasCached = !!localStorage.getItem('cached_admin_dashboard');
+      if (!hasCached && !isSilent) {
+        Swal.fire({
+          icon: 'error',
+          title: 'เชื่อมต่อล้มเหลว',
+          text: err.message.includes('404')
+            ? 'URL ของ Google Apps Script Web App เปลี่ยนไป (HTTP 404) กรุณาคัดลอก Web App URL ใหม่จากหน้า Deploy มาใส่ในระบบ'
+            : err.message,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [dashboardData]);
+  }, []);
 
   useEffect(() => {
     if (!authLoading) {
