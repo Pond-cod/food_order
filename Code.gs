@@ -570,3 +570,11 @@ function uploadImageToDrive(base64Data, menuName) {
     throw new Error(err.message || "ไม่สามารถอัปโหลดไฟล์ภาพได้");
   }
 }
+
+/**
+ * ฟังก์ชันสำหรับกดรันใน Apps Script Editor เพื่อขอสิทธิ์ Google Drive ครั้งแรก
+ */
+function authorizeDrivePermissions() {
+  const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+  console.log("Drive Permission OK! โฟลเดอร์ชื่อ:", folder.getName());
+}
