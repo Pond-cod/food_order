@@ -572,9 +572,12 @@ function uploadImageToDrive(base64Data, menuName) {
 }
 
 /**
- * ฟังก์ชันสำหรับกดรันใน Apps Script Editor เพื่อขอสิทธิ์ Google Drive ครั้งแรก
+ * ฟังก์ชันสำหรับกดรันใน Apps Script Editor เพื่อขอสิทธิ์ Google Drive แบบเต็ม (Write / Create File)
  */
 function authorizeDrivePermissions() {
   const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
-  console.log("Drive Permission OK! โฟลเดอร์ชื่อ:", folder.getName());
+  // เรียกคำสั่งสร้างและลบไฟล์ เพื่อบังคับให้ Google ขอสิทธิ์ Write (https://www.googleapis.com/auth/drive)
+  const testFile = folder.createFile("temp_permission_check.txt", "Permission Granted");
+  testFile.setTrashed(true);
+  console.log("✅ ได้รับสิทธิ์ Google Drive แบบ Write/Create File ครบถ้วนเรียบร้อยแล้ว!");
 }
