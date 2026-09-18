@@ -17,6 +17,41 @@ export default function AdminTable({
   const [userId, setUserId] = useState('');
   const [role, setRole] = useState('Admin');
 
+  // ลิงก์สำหรับส่งให้ผู้ดูแลใหม่เปิดเพื่อดู User ID
+  const LIFF_ID = "2011625055-XnlJJcQp";
+  const inviteLink = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+    ? `https://liff.line.me/${LIFF_ID}#admin`
+    : (typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}#admin` : `https://liff.line.me/${LIFF_ID}#admin`);
+
+  const inviteMessage = `ขอเชิญร่วมเป็นผู้ดูแลระบบสั่งอาหาร\nกรุณากดเปิดลิงก์นี้ใน LINE เพื่อดูและคัดลอก LINE User ID ส่งกลับมาให้แอดมินเปิดสิทธิ์:\n${inviteLink}`;
+
+  const handleCopyInviteLink = () => {
+    navigator.clipboard.writeText(inviteLink);
+    Swal.fire({
+      icon: 'success',
+      title: 'คัดลอกลิงก์สำเร็จ!',
+      text: 'ส่งลิงก์นี้ให้ผู้ที่ต้องการให้เป็นแอดมิน เพื่อให้เขาเปิดใน LINE แล้วส่ง User ID กลับมาครับ',
+      timer: 2200,
+      showConfirmButton: false,
+    });
+  };
+
+  const handleCopyInviteMessage = () => {
+    navigator.clipboard.writeText(inviteMessage);
+    Swal.fire({
+      icon: 'success',
+      title: 'คัดลอกข้อความพร้อมลิงก์สำเร็จ!',
+      text: 'นำข้อความนี้ไปวางส่งในแชท LINE ได้ทันทีครับ',
+      timer: 2200,
+      showConfirmButton: false,
+    });
+  };
+
+  const handleShareToLine = () => {
+    const shareUrl = `https://line.me/R/share?text=${encodeURIComponent(inviteMessage)}`;
+    window.open(shareUrl, '_blank');
+  };
+
   // เปิด Modal เพิ่ม
   const handleOpenAdd = () => {
     setIsEditing(false);
@@ -72,14 +107,26 @@ export default function AdminTable({
           </small>
         </div>
 
-        <button
-          type="button"
-          className="btn btn-success d-flex align-items-center gap-2 fw-semibold px-3 py-2 rounded-3 shadow-sm"
-          onClick={handleOpenAdd}
-        >
-          <i className="fa-solid fa-user-plus"></i>
-          <span>เพิ่มผู้ดูแลระบบ</span>
-        </button>
+        <div className="d-flex align-items-center gap-2">
+          <button
+            type="button"
+            className="btn btn-outline-success d-flex align-items-center gap-2 fw-semibold px-3 py-2 rounded-3 shadow-sm"
+            onClick={handleCopyInviteLink}
+            title="คัดลอกลิงก์สำหรับส่งให้ผู้ดูแลใหม่เปิดดู User ID ใน LINE"
+          >
+            <i className="fa-solid fa-share-nodes"></i>
+            <span>ส่งลิงก์ขอ User ID</span>
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-success d-flex align-items-center gap-2 fw-semibold px-3 py-2 rounded-3 shadow-sm"
+            onClick={handleOpenAdd}
+          >
+            <i className="fa-solid fa-user-plus"></i>
+            <span>เพิ่มผู้ดูแลระบบ</span>
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -251,7 +298,7 @@ export default function AdminTable({
 
                   <div className="mb-3">
                     <label className="form-label fw-bold text-dark" style={{ fontSize: '13px' }}>
-                      LINE User ID:
+                      LINE User ID: <span className="text-danger">*</span>
                     </label>
                     <input
                       type="text"
@@ -265,6 +312,60 @@ export default function AdminTable({
                       LINE User ID ดูได้จากหน้าโปรไฟล์ LINE หรือตารางออเดอร์ในหน้าจอครัว
                     </small>
                   </div>
+
+                  {/* กล่องส่งลิงก์เชิญเพื่อขอ LINE User ID */}
+                  {!isEditing && (
+                    <div className="p-3 rounded-3 mb-3" style={{ background: '#F0FDF4', border: '1.5px dashed #86EFAC' }}>
+                      <div className="d-flex align-items-center justify-content-between mb-1">
+                        <strong className="text-success small d-flex align-items-center gap-1">
+                          <i className="fa-solid fa-circle-question"></i>
+                          <span>ยังไม่มี LINE User ID ของคนนี้?</span>
+                        </strong>
+                        <span className="badge bg-success text-white py-0 px-2" style={{ fontSize: '10px' }}>วิธีที่ง่ายที่สุด</span>
+                      </div>
+                      <p className="text-secondary small mb-2" style={{ fontSize: '11.5px', lineHeight: '1.4' }}>
+                        ส่งลิงก์นี้ให้เขาเปิดใน LINE ระบบจะแสดง User ID พร้อมปุ่มกดส่งกลับมาให้คุณทันที:
+                      </p>
+                      <div className="input-group input-group-sm mb-2">
+                        <input
+                          type="text"
+                          className="form-control bg-white font-monospace text-muted"
+                          value={inviteLink}
+                          readOnly
+                          style={{ fontSize: '11px' }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-outline-success d-flex align-items-center gap-1"
+                          onClick={handleCopyInviteLink}
+                          title="คัดลอกลิงก์"
+                        >
+                          <i className="fa-regular fa-copy"></i>
+                          <span>คัดลอก</span>
+                        </button>
+                      </div>
+                      <div className="d-flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-success text-white d-flex align-items-center gap-1 px-2 py-1 shadow-sm"
+                          style={{ fontSize: '11.5px', borderRadius: '6px' }}
+                          onClick={handleShareToLine}
+                        >
+                          <i className="fa-brands fa-line fs-6"></i>
+                          <span>ส่งแชทใน LINE ทันที</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 px-2 py-1"
+                          style={{ fontSize: '11.5px', borderRadius: '6px' }}
+                          onClick={handleCopyInviteMessage}
+                        >
+                          <i className="fa-solid fa-comment-dots"></i>
+                          <span>คัดลอกข้อความชวน</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="mb-2">
                     <label className="form-label fw-bold text-dark" style={{ fontSize: '13px' }}>
