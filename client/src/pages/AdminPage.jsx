@@ -27,23 +27,35 @@ import ImageModal from '../components/common/ImageModal';
 const VALID_TABS = ['schedule', 'menus', 'kitchen', 'admins'];
 
 export default function AdminPage({ onNavigateOrder }) {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, adminRole, isSuperAdmin, isAdminRole, isCook, loading: authLoading } = useAuth();
 
-  // จัดการ Tab ผ่าน URL Hash (เช่น #admin/schedule, #admin/menus, #admin/kitchen, #admin/admins)
-  const getTabFromHash = () => {
+  // กำหนดแท็บที่อนุญาตตาม Role
+  // 1. SuperAdmin: เข้าได้ทุกอย่าง
+  // 2. Admin: กำหนดหน้าสั่งอาหาร, เมนู, ครัว (ซ่อนแท็บผู้ดูแล)
+  // 3. Cook: เน้นครัว และเปิด/ปิดเมนูหมด (ซ่อนแท็บตั้งค่ารอบ และซ่อนแท็บผู้ดูแล)
+  const getAllowedTabs = useCallback(() => {
+    if (isCook) return ['kitchen', 'menus'];
+    if (isSuperAdmin) return ['schedule', 'menus', 'kitchen', 'admins'];
+    return ['schedule', 'menus', 'kitchen']; // Admin
+  }, [isCook, isSuperAdmin]);
+
+  // จัดการ Tab ผ่าน URL Hash (เช่น #admin/schedule, #admin/menus, #admin/kitchen, #admin/admins) พร้อม Guard
+  const getTabFromHash = useCallback(() => {
     try {
       const hash = window.location.hash || '';
       const match = hash.replace('#', '').replace('admin/', '');
-      if (VALID_TABS.includes(match)) {
+      const allowed = getAllowedTabs();
+      if (allowed.includes(match)) {
         return match;
       }
+      return allowed[0] || (isCook ? 'kitchen' : 'schedule');
     } catch (e) {}
-    return 'schedule';
-  };
+    return isCook ? 'kitchen' : 'schedule';
+  }, [getAllowedTabs, isCook]);
 
   const [activeTab, setActiveTab] = useState(getTabFromHash);
 
-  // Sync กับ hash change event
+  // Sync กับ hash change event และบังคับ Guard ตามสิทธิ์
   useEffect(() => {
     const handleHashChange = () => {
       const tab = getTabFromHash();
@@ -51,9 +63,23 @@ export default function AdminPage({ onNavigateOrder }) {
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+  }, [getTabFromHash]);
+
+  // เมื่อสิทธิ์โหลดเสร็จ ตรวจสอบว่าแท็บปัจจุบันอยู่ในสิทธิ์ที่ได้รับอนุญาตหรือไม่
+  useEffect(() => {
+    if (!authLoading && isAdmin) {
+      const allowed = getAllowedTabs();
+      if (!allowed.includes(activeTab)) {
+        const fallback = allowed[0] || (isCook ? 'kitchen' : 'schedule');
+        setActiveTab(fallback);
+        window.location.hash = `admin/${fallback}`;
+      }
+    }
+  }, [authLoading, isAdmin, adminRole, getAllowedTabs, activeTab, isCook]);
 
   const handleTabChange = (tab) => {
+    const allowed = getAllowedTabs();
+    if (!allowed.includes(tab)) return;
     setActiveTab(tab);
     window.location.hash = `admin/${tab}`;
   };
@@ -372,15 +398,44 @@ export default function AdminPage({ onNavigateOrder }) {
 
   return (
     <div className="container-fluid container-xl py-3 py-md-4">
-      {/* 4 Dedicated Tabs Navigation with Kitchen Prominence */}
+      {/* Role Banner / Indicator */}
+      <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
+        <div className="d-flex align-items-center gap-2">
+          <small className="text-secondary fw-semibold">ระดับสิทธิ์การเข้าใช้งาน:</small>
+          {isSuperAdmin && (
+            <span className="badge bg-warning text-dark border border-warning px-2 py-1 rounded-pill shadow-sm">
+              <i className="fa-solid fa-crown me-1"></i>SuperAdmin (จัดการได้ทุกส่วน)
+            </span>
+          )}
+          {!isSuperAdmin && !isCook && (
+            <span className="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1 rounded-pill shadow-sm">
+              <i className="fa-solid fa-user-gear me-1"></i>Admin (กำหนดหน้าสั่งอาหาร & จัดการเมนู)
+            </span>
+          )}
+          {isCook && (
+            <span className="badge bg-warning bg-opacity-25 text-dark border border-warning px-2 py-1 rounded-pill shadow-sm">
+              <i className="fa-solid fa-fire-burner me-1 text-danger"></i>Cook (เน้นเมนู & ออเดอร์ครัว)
+            </span>
+          )}
+        </div>
+
+        {user && user.displayName && (
+          <div className="text-secondary small d-none d-sm-block">
+            ผู้ใช้: <strong className="text-dark">{user.displayName}</strong>
+          </div>
+        )}
+      </div>
+
+      {/* 4 Dedicated Tabs Navigation with Role-based Tab Filtering */}
       <AdminTabs
         activeTab={activeTab}
         onTabChange={handleTabChange}
         ordersCount={activeOrdersCount || orders.length}
+        role={adminRole}
       />
 
-      {/* Feature 1: กำหนดหน้าสั่งอาหาร (Schedule & Daily Menus) */}
-      {activeTab === 'schedule' && (
+      {/* Feature 1: กำหนดหน้าสั่งอาหาร (Schedule & Daily Menus) - SuperAdmin & Admin only */}
+      {activeTab === 'schedule' && !isCook && (
         <ScheduleSettings
           currentRound={currentRound}
           allMenus={menus}
@@ -393,6 +448,7 @@ export default function AdminPage({ onNavigateOrder }) {
       {activeTab === 'menus' && (
         <MenuTable
           menus={menus}
+          role={adminRole}
           onToggleStatus={handleToggleMenuStatus}
           onEditMenu={(menu) => {
             setEditingMenu(menu);
@@ -421,8 +477,8 @@ export default function AdminPage({ onNavigateOrder }) {
         />
       )}
 
-      {/* Feature 4: ผู้ดูแลระบบ (Admin Access Control) */}
-      {activeTab === 'admins' && (
+      {/* Feature 4: ผู้ดูแลระบบ (Admin Access Control) - SuperAdmin ONLY */}
+      {activeTab === 'admins' && isSuperAdmin && (
         <AdminTable
           admins={admins}
           onAddAdmin={handleAddAdmin}

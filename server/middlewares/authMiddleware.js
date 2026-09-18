@@ -35,6 +35,35 @@ async function requireAdmin(req, res, next) {
   }
 }
 
+/**
+ * Middleware ตรวจสอบสิทธิ์ SuperAdmin เท่านั้น
+ */
+function requireSuperAdmin(req, res, next) {
+  if (!req.adminUser || req.adminUser.role !== 'SuperAdmin') {
+    return res.status(403).json({
+      status: 'error',
+      message: 'ปฏิเสธการเข้าถึง: เฉพาะ SuperAdmin เท่านั้นที่สามารถดำเนินการนี้ได้',
+    });
+  }
+  next();
+}
+
+/**
+ * Middleware ป้องกันไม่ให้ Cook แก้ไขการตั้งค่ารอบหรือโครงสร้างเมนู
+ */
+function requireNotCook(req, res, next) {
+  const role = (req.adminUser && req.adminUser.role || '').toLowerCase();
+  if (role === 'cook' || role === 'kitchen') {
+    return res.status(403).json({
+      status: 'error',
+      message: 'สิทธิ์ Cook ไม่สามารถดำเนินการนี้ได้',
+    });
+  }
+  next();
+}
+
 module.exports = {
   requireAdmin,
+  requireSuperAdmin,
+  requireNotCook,
 };

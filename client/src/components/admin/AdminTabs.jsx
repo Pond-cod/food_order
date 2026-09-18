@@ -1,18 +1,25 @@
 import React from 'react';
 
-export default function AdminTabs({ activeTab, onTabChange, ordersCount = 0 }) {
-  const tabs = [
+export default function AdminTabs({ activeTab, onTabChange, ordersCount = 0, role = 'Admin' }) {
+  const normRole = (role || '').toLowerCase();
+  const isSuperAdmin = normRole === 'superadmin';
+  const isCook = normRole === 'cook' || normRole === 'kitchen';
+
+  // กำหนดรายการแท็บทั้งหมด
+  const allTabs = [
     { 
       id: 'schedule', 
       label: 'กำหนดหน้าสั่งอาหาร', 
       icon: 'fa-solid fa-calendar-check',
-      description: 'รอบสั่ง, วันที่ & เมนูเปิดขาย'
+      description: 'รอบสั่ง, วันที่ & เมนูเปิดขาย',
+      visible: isSuperAdmin || !isCook, // SuperAdmin & Admin
     },
     { 
       id: 'menus', 
       label: 'จัดการเมนูทั้งหมด', 
       icon: 'fa-solid fa-utensils',
-      description: 'เพิ่ม/แก้ไข/ลบ/ปิด เมนู'
+      description: 'เพิ่ม/แก้ไข/ลบ/ปิด เมนู',
+      visible: true, // ทุกคนเข้าได้
     },
     { 
       id: 'kitchen', 
@@ -20,14 +27,24 @@ export default function AdminTabs({ activeTab, onTabChange, ordersCount = 0 }) {
       icon: 'fa-solid fa-fire-burner',
       description: 'สรุปยอดครัว & รายการสั่งซื้อ',
       isProminent: true,
+      visible: true, // ทุกคนเข้าได้ (สำหรับ Cook จะเด่นสุด)
     },
     { 
       id: 'admins', 
       label: 'ผู้ดูแลระบบ', 
       icon: 'fa-solid fa-user-shield',
-      description: 'สิทธิ์ผู้ดูแล & เปิด/ปิด'
+      description: 'สิทธิ์ผู้ดูแล & เปิด/ปิด',
+      visible: isSuperAdmin, // เฉพาะ SuperAdmin เท่านั้น
     },
   ];
+
+  // กรองเฉพาะแท็บที่ได้รับอนุญาตตาม Role
+  const tabs = allTabs.filter((t) => t.visible);
+
+  // สำหรับ Cook จัดลำดับให้ออเดอร์ & ครัว ขึ้นอันดับแรก
+  if (isCook) {
+    tabs.sort((a, b) => (a.id === 'kitchen' ? -1 : 1));
+  }
 
   return (
     <div className="overflow-x-auto pb-2 mb-4">

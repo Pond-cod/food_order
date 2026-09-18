@@ -140,11 +140,29 @@ export default function AdminTable({
 
                     {/* Role */}
                     <td>
-                      <span className={`badge px-2 py-1 rounded-pill ${
-                        isSuper ? 'bg-warning text-dark border border-warning' : 'bg-success bg-opacity-10 text-success border border-success'
-                      }`}>
-                        {a.role || 'Admin'}
-                      </span>
+                      {(() => {
+                        const roleStr = a.role || 'Admin';
+                        const isC = roleStr.toLowerCase() === 'cook' || roleStr.toLowerCase() === 'kitchen';
+                        if (isSuper) {
+                          return (
+                            <span className="badge px-2 py-1 rounded-pill bg-warning text-dark border border-warning">
+                              <i className="fa-solid fa-crown me-1"></i>SuperAdmin
+                            </span>
+                          );
+                        }
+                        if (isC) {
+                          return (
+                            <span className="badge px-2 py-1 rounded-pill bg-warning bg-opacity-25 text-dark border border-warning">
+                              <i className="fa-solid fa-fire-burner me-1 text-danger"></i>Cook (พ่อครัว)
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="badge px-2 py-1 rounded-pill bg-success bg-opacity-10 text-success border border-success">
+                            <i className="fa-solid fa-user-gear me-1"></i>Admin (ผู้จัดการ)
+                          </span>
+                        );
+                      })()}
                     </td>
 
                     {/* Status Switch (Active / Inactive) */}
@@ -257,10 +275,14 @@ export default function AdminTable({
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
                     >
-                      <option value="Admin">Admin (จัดการได้ทุกส่วน)</option>
-                      <option value="Kitchen">Kitchen (ดูออเดอร์และยอดครัว)</option>
-                      <option value="Staff">Staff (จัดการเมนูและรอบ)</option>
+                      <option value="Admin">Admin (กำหนดหน้าสั่งอาหาร & จัดการเมนู)</option>
+                      <option value="Cook">Cook (เน้นเมนู และออเดอร์ครัว)</option>
+                      <option value="SuperAdmin">SuperAdmin (เจ้าของร้าน / จัดการได้ทุกส่วนรวมทั้งผู้ดูแล)</option>
                     </select>
+                    <small className="text-muted d-block mt-1" style={{ fontSize: '11px' }}>
+                      * Admin: จัดการรอบและเมนูได้ แต่ไม่เห็นแท็บผู้ดูแล<br/>
+                      * Cook: เปิดหน้าออเดอร์ครัวเป็นหลัก และปิดขายเมนูหมดได้
+                    </small>
                   </div>
                 </div>
 

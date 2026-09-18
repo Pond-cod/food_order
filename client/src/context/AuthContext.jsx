@@ -72,8 +72,25 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const normalizedRole = (adminRole || '').toLowerCase();
+  const isSuperAdmin = normalizedRole === 'superadmin';
+  const isCook = normalizedRole === 'cook' || normalizedRole === 'kitchen';
+  const isAdminRole = isSuperAdmin || normalizedRole === 'admin';
+
   return (
-    <AuthContext.Provider value={{ user, isAdmin, adminRole, loading, error, refreshAuth: initLiff }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAdmin,
+        adminRole,
+        isSuperAdmin,
+        isAdminRole,
+        isCook,
+        loading,
+        error,
+        refreshAuth: initLiff,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

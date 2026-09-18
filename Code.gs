@@ -62,9 +62,16 @@ function checkAdminUser(ss, userId, displayName) {
           message: "สิทธิ์ผู้ดูแลระบบของคุณถูกปิดใช้งานชั่วคราว"
         };
       }
+
+      let rawRole = String(data[i][2] || "Admin").trim();
+      let normRole = "Admin";
+      if (rawRole.toLowerCase() === "superadmin") normRole = "SuperAdmin";
+      else if (rawRole.toLowerCase() === "cook" || rawRole.toLowerCase() === "kitchen") normRole = "Cook";
+      else normRole = "Admin";
+
       return {
         isAdmin: true,
-        role: String(data[i][2] || "Admin"),
+        role: normRole,
         displayName: String(data[i][1] || "")
       };
     }
@@ -398,6 +405,25 @@ function doPost(e) {
         code: 403,
         message: "ปฏิเสธการเข้าถึง: คุณไม่มีสิทธิ์จัดการระบบหลังบ้าน"
       });
+    }
+
+    const userRole = adminCheck.role || "Admin"; // "SuperAdmin" | "Admin" | "Cook"
+
+    // Guard: สิทธิ์ Cook ไม่อนุญาตให้ตั้งค่ารอบ
+    if ((action === "updateRound" || action === "updateSchedule") && userRole === "Cook") {
+      throw new Error("สิทธิ์ Cook ไม่สามารถกำหนดรอบและหน้าสั่งอาหารได้");
+    }
+
+    // Guard: สิทธิ์ Cook ไม่อนุญาตให้เพิ่ม ลบ หรือแก้ไขเมนู (อนุญาตเฉพาะสลับเปิด/ปิดขาย toggleMenuStatus)
+    if ((action === "saveMenu" || action === "deleteMenu") && userRole === "Cook") {
+      throw new Error("สิทธิ์ Cook ไม่สามารถเพิ่มหรือลบเมนูได้ (อนุญาตเฉพาะสลับเปิด/ปิดขาย)");
+    }
+
+    // Guard: สิทธิ์จัดการผู้ดูแลระบบ (เพิ่ม/ลบ/แก้ไข/สลับ Active-Inactive) อนุญาตเฉพาะ SuperAdmin เท่านั้น
+    if (action === "addAdmin" || action === "deleteAdmin" || action === "toggleAdminStatus" || action === "editAdmin") {
+      if (userRole !== "SuperAdmin") {
+        throw new Error("เฉพาะ SuperAdmin เท่านั้นที่สามารถจัดการผู้ดูแลระบบได้");
+      }
     }
 
     // 1. อัปเดตรอบสั่งอาหาร (updateRound)

@@ -1,7 +1,10 @@
 import React from 'react';
 import { formatCurrency } from '../../utils/formatters';
 
-export default function MenuTable({ menus, onToggleStatus, onEditMenu, onDeleteMenu, onZoomImage, onOpenAddModal }) {
+export default function MenuTable({ menus, onToggleStatus, onEditMenu, onDeleteMenu, onZoomImage, onOpenAddModal, role = 'Admin' }) {
+  const isCook = (role || '').toLowerCase() === 'cook' || (role || '').toLowerCase() === 'kitchen';
+  const canEditCatalog = !isCook;
+
   return (
     <div className="card border-0 shadow-sm rounded-4 p-3 mb-4">
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -10,16 +13,22 @@ export default function MenuTable({ menus, onToggleStatus, onEditMenu, onDeleteM
             <i className="fa-solid fa-bowl-food text-success"></i>
             <span>เมนูอาหารทั้งหมด</span>
           </h5>
-          <small className="text-muted">กดสลับสวิตช์เพื่อเปิดขาย / ปิดขาย สำหรับรอบแต่ละวันได้ทันที</small>
+          <small className="text-muted">
+            {isCook 
+              ? 'สิทธิ์พ่อครัว: สามารถกดสลับสวิตช์เปิด/ปิดขายได้ทันที หากวัตถุดิบหมด' 
+              : 'กดสลับสวิตช์เพื่อเปิดขาย / ปิดขาย สำหรับรอบแต่ละวันได้ทันที'}
+          </small>
         </div>
-        <button
-          type="button"
-          className="btn btn-success d-flex align-items-center gap-2 fw-semibold px-3 py-2 rounded-3 shadow-sm"
-          onClick={onOpenAddModal}
-        >
-          <i className="fa-solid fa-plus"></i>
-          <span>เพิ่มเมนูใหม่</span>
-        </button>
+        {canEditCatalog && (
+          <button
+            type="button"
+            className="btn btn-success d-flex align-items-center gap-2 fw-semibold px-3 py-2 rounded-3 shadow-sm"
+            onClick={onOpenAddModal}
+          >
+            <i className="fa-solid fa-plus"></i>
+            <span>เพิ่มเมนูใหม่</span>
+          </button>
+        )}
       </div>
 
       <div className="table-responsive">
@@ -32,7 +41,7 @@ export default function MenuTable({ menus, onToggleStatus, onEditMenu, onDeleteM
               <th>ราคา</th>
               <th>สถานะขาย</th>
               <th>เปิด/ปิดขาย</th>
-              <th style={{ textAlign: 'right' }}>จัดการ</th>
+              {canEditCatalog && <th style={{ textAlign: 'right' }}>จัดการ</th>}
             </tr>
           </thead>
           <tbody>
@@ -100,24 +109,26 @@ export default function MenuTable({ menus, onToggleStatus, onEditMenu, onDeleteM
                         />
                       </div>
                     </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-light border text-primary me-1 px-2 py-1"
-                        onClick={() => onEditMenu(menu)}
-                        title="แก้ไขเมนู"
-                      >
-                        <i className="fa-solid fa-pen"></i>
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-light border text-danger px-2 py-1"
-                        onClick={() => onDeleteMenu(menu.rowIndex, menu.name)}
-                        title="ลบเมนู"
-                      >
-                        <i className="fa-solid fa-trash"></i>
-                      </button>
-                    </td>
+                    {canEditCatalog && (
+                      <td style={{ textAlign: 'right' }}>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-light border text-primary me-1 px-2 py-1"
+                          onClick={() => onEditMenu(menu)}
+                          title="แก้ไขเมนู"
+                        >
+                          <i className="fa-solid fa-pen"></i>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-light border text-danger px-2 py-1"
+                          onClick={() => onDeleteMenu(menu.rowIndex, menu.name)}
+                          title="ลบเมนู"
+                        >
+                          <i className="fa-solid fa-trash"></i>
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 );
               })
