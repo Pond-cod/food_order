@@ -289,7 +289,7 @@ body {
 /* Container wrapper with dynamic viewport height and colorful culinary background mesh */
 .order-page-wrapper {
   min-height: 100dvh;
-  padding-bottom: 95px; /* Leave room for sticky bottom bar on mobile */
+  padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px)); /* Leave ample room for sticky bottom bar on mobile */
   background: 
     radial-gradient(circle at 12% 10%, rgba(6, 199, 85, 0.09) 0%, transparent 45%),
     radial-gradient(circle at 88% 18%, rgba(245, 158, 11, 0.10) 0%, transparent 45%),
@@ -860,4 +860,58 @@ body {
   box-shadow: none;
   cursor: not-allowed;
 }
+
+/* ========================================================
+   Print-Friendly Styles for Kitchen Orders (IMPROVE-05)
+   ======================================================== */
+@media print {
+  nav.navbar,
+  .sticky-bottom-bar,
+  .btn,
+  .btn-tab-kitchen,
+  .overflow-x-auto,
+  .card-mini-options,
+  .card-mini-stepper,
+  input,
+  button,
+  .alert,
+  .no-print {
+    display: none !important;
+  }
+
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .container, .container-fluid, .container-xl {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .card {
+    border: 1px solid #cccccc !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  .table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .table th, .table td {
+    border: 1px solid #cccccc !important;
+    padding: 6px 8px !important;
+    color: #000000 !important;
+  }
+
+  .badge {
+    border: 1px solid #888888 !important;
+    color: #000000 !important;
+    background: transparent !important;
+  }
+}
+
 

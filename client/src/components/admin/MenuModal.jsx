@@ -69,10 +69,16 @@ export default function MenuModal({ isOpen, onClose, onSave, editingMenu, isSavi
       return;
     }
 
+    const numPrice = Number(price);
+    if (isNaN(numPrice) || numPrice <= 0) {
+      alert('กรุณากรอกราคาเป็นตัวเลขที่มากกว่า 0 บาท');
+      return;
+    }
+
     onSave({
       rowIndex: editingMenu ? editingMenu.rowIndex : null,
       name: name.trim(),
-      price: Number(price),
+      price: numPrice,
       status: editingMenu ? editingMenu.status : 'Available',
       imageUrl,
       imageBase64,
@@ -120,6 +126,9 @@ export default function MenuModal({ isOpen, onClose, onSave, editingMenu, isSavi
                   className="form-control py-2 shadow-sm rounded-3"
                   placeholder="เช่น 50"
                   value={price}
+                  min="1"
+                  max="99999"
+                  step="1"
                   onChange={(e) => setPrice(e.target.value)}
                   required
                 />

@@ -38,11 +38,12 @@ export default function OrderSummary({
 
           <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="pe-1">
             {cartItems.map(({ menu, quantity, isExtra, hasEgg }) => {
+              const cartKey = String(menu.id || menu.name || 'unknown');
               const unitPrice = (Number(menu.price) || 0) + (isExtra ? 10 : 0) + (hasEgg ? 10 : 0);
               const subtotal = unitPrice * quantity;
 
               return (
-                <div key={menu.name} className="cart-summary-item shadow-sm">
+                <div key={cartKey} className="cart-summary-item shadow-sm">
                   <div className="d-flex justify-content-between align-items-start gap-2 mb-1">
                     <div>
                       <strong className="text-dark text-truncate d-block" style={{ fontSize: '13px', maxWidth: '170px' }}>
@@ -79,7 +80,7 @@ export default function OrderSummary({
                         <button
                           type="button"
                           className="card-mini-stepper-btn minus"
-                          onClick={() => onUpdateQuantity(menu.name, -1)}
+                          onClick={() => onUpdateQuantity(cartKey, -1)}
                           title="ลดจำนวน"
                         >
                           <i className="fa-solid fa-minus"></i>
@@ -88,7 +89,7 @@ export default function OrderSummary({
                         <button
                           type="button"
                           className="card-mini-stepper-btn plus"
-                          onClick={() => onUpdateQuantity(menu.name, 1)}
+                          onClick={() => onUpdateQuantity(cartKey, 1)}
                           title="เพิ่มจำนวน"
                         >
                           <i className="fa-solid fa-plus"></i>
@@ -99,7 +100,7 @@ export default function OrderSummary({
                         <button
                           type="button"
                           className="btn btn-sm text-muted p-1 border-0"
-                          onClick={() => onRemoveItem(menu.name)}
+                          onClick={() => onRemoveItem(cartKey)}
                           title="ลบรายการนี้"
                         >
                           <i className="fa-solid fa-xmark text-danger" style={{ fontSize: '12px' }}></i>
@@ -113,7 +114,7 @@ export default function OrderSummary({
                     <button
                       type="button"
                       className={`cart-option-btn ${isExtra ? 'active' : ''}`}
-                      onClick={() => onToggleOption && onToggleOption(menu.name, 'isExtra')}
+                      onClick={() => onToggleOption && onToggleOption(cartKey, 'isExtra')}
                       title="สลับเป็น พิเศษ (+10 บาท)"
                     >
                       <span>{isExtra ? '✓ ⭐ พิเศษ' : '⭐ พิเศษ'}</span>
@@ -123,7 +124,7 @@ export default function OrderSummary({
                     <button
                       type="button"
                       className={`cart-option-btn ${hasEgg ? 'active' : ''}`}
-                      onClick={() => onToggleOption && onToggleOption(menu.name, 'hasEgg')}
+                      onClick={() => onToggleOption && onToggleOption(cartKey, 'hasEgg')}
                       title="เพิ่มไข่ดาว (+10 บาท)"
                     >
                       <span>{hasEgg ? '✓ 🍳 +ไข่ดาว' : '🍳 +ไข่ดาว'}</span>

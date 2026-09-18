@@ -34,6 +34,7 @@ export default function OrderPage() {
   const [phone, setPhone] = useState('');
   const [department, setDepartment] = useState('');
   const [note, setNote] = useState('');
+  const [isOfflineFallback, setIsOfflineFallback] = useState(false);
 
   const [isLoading, setIsLoading] = useState(() => {
     try {
@@ -62,11 +63,16 @@ export default function OrderPage() {
       if (res.status === 'success') {
         setMenus(res.menus || []);
         setCurrentRound(res.round || '');
+        // UX-02: ตรวจสอบว่าใช้ข้อมูลสำรอง (offline fallback) หรือไม่
+        setIsOfflineFallback(!!res.isOfflineFallback);
 
-        localStorage.setItem(
-          'liff_food_order_cache',
-          JSON.stringify({ round: res.round, menus: res.menus })
-        );
+        // อัปเดต cache เฉพาะเมื่อได้ข้อมูลจริง ไม่ใช่จาก fallback
+        if (!res.isOfflineFallback) {
+          localStorage.setItem(
+            'liff_food_order_cache',
+            JSON.stringify({ round: res.round, menus: res.menus })
+          );
+        }
       }
     } catch (err) {
       console.warn("Load menu error:", err);
@@ -75,31 +81,38 @@ export default function OrderPage() {
     }
   }
 
+
+  // BUG-01 Fix: ใช้ menu.id || menu.name เป็น cart key เพื่อป้องกัน collision
+  function getCartKey(menu) {
+    return String(menu.id || menu.name || 'unknown');
+  }
+
   // เพิ่มเมนูลงตะกร้า (เริ่มที่ 1 กล่อง)
   function handleAddToCart(menu) {
+    const key = getCartKey(menu);
     setCart((prev) => {
-      const existing = prev[menu.name];
+      const existing = prev[key];
       if (existing) {
         return {
           ...prev,
-          [menu.name]: { ...existing, quantity: existing.quantity + 1 },
+          [key]: { ...existing, quantity: existing.quantity + 1 },
         };
       }
       return {
         ...prev,
-        [menu.name]: { menu, quantity: 1, isExtra: false, hasEgg: false },
+        [key]: { menu, quantity: 1, isExtra: false, hasEgg: false },
       };
     });
   }
 
   // สลับตัวเลือกเสริม (เช่น พิเศษ, ไข่ดาว)
-  function handleToggleOption(menuName, optionKey) {
+  function handleToggleOption(menuKey, optionKey) {
     setCart((prev) => {
-      const existing = prev[menuName];
+      const existing = prev[menuKey];
       if (!existing) return prev;
       return {
         ...prev,
-        [menuName]: {
+        [menuKey]: {
           ...existing,
           [optionKey]: !existing[optionKey],
         },
@@ -108,28 +121,28 @@ export default function OrderPage() {
   }
 
   // ปรับเพิ่ม/ลดจำนวนในตะกร้า
-  function handleUpdateQuantity(menuName, delta) {
+  function handleUpdateQuantity(menuKey, delta) {
     setCart((prev) => {
-      const existing = prev[menuName];
+      const existing = prev[menuKey];
       if (!existing) return prev;
       const newQty = existing.quantity + delta;
       if (newQty <= 0) {
         const next = { ...prev };
-        delete next[menuName];
+        delete next[menuKey];
         return next;
       }
       return {
         ...prev,
-        [menuName]: { ...existing, quantity: newQty },
+        [menuKey]: { ...existing, quantity: newQty },
       };
     });
   }
 
   // ลบรายการออกจากตะกร้า
-  function handleRemoveFromCart(menuName) {
+  function handleRemoveFromCart(menuKey) {
     setCart((prev) => {
       const next = { ...prev };
-      delete next[menuName];
+      delete next[menuKey];
       return next;
     });
   }
@@ -191,12 +204,13 @@ export default function OrderPage() {
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
             <span style="color: #64748B;">เบอร์โทร:</span>
-            <span>${phone || '-'}</span>
+            <span style="color: ${phone ? '#1E293B' : '#EF4444'}; font-weight: ${phone ? '500' : 'bold'};">${phone || 'ไม่ได้ระบุ'}</span>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
             <span style="color: #64748B;">แผนก/โต๊ะ:</span>
-            <span>${department || '-'}</span>
+            <span style="color: ${department ? '#1E293B' : '#EF4444'}; font-weight: ${department ? '500' : 'bold'};">${department || 'ไม่ได้ระบุ'}</span>
           </div>
+          ${(!phone && !department) ? '<div style="color: #B45309; font-size: 11.5px; background: #FEF3C7; padding: 6px 10px; border-radius: 8px; margin-bottom: 6px;">💡 แนะนำ: กรอกเบอร์โทรหรือแผนก เพื่อให้จัดส่งได้ถูกต้อง</div>' : ''}
           <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
             <span style="color: #64748B;">หมายเหตุ:</span>
             <span style="color: #D97706;">${note || '-'}</span>
@@ -347,6 +361,25 @@ export default function OrderPage() {
           </div>
         </div>
 
+        {/* Offline Fallback Banner — UX-02 */}
+        {isOfflineFallback && (
+          <div className="alert border-0 rounded-4 shadow-sm mb-3 d-flex align-items-center gap-2" style={{ background: 'linear-gradient(135deg, #FFF7ED, #FFEDD5)', border: '1px solid #FDBA74' }}>
+            <i className="fa-solid fa-wifi fs-5" style={{ color: '#F97316' }}></i>
+            <div>
+              <strong style={{ color: '#C2410C' }}>ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้:</strong>{' '}
+              <span style={{ color: '#7C2D12', fontSize: '13px' }}>กำลังแสดงเมนูจากข้อมูลที่บันทึกไว้ล่าสุด กรุณารีเฟรชหน้าเพื่อโหลดเมนูล่าสุด</span>
+            </div>
+            <button
+              type="button"
+              className="btn btn-sm ms-auto text-nowrap"
+              style={{ background: '#F97316', color: 'white', fontSize: '12px', borderRadius: '8px' }}
+              onClick={() => { setIsOfflineFallback(false); loadData(); }}
+            >
+              <i className="fa-solid fa-rotate me-1"></i>รีเฟรช
+            </button>
+          </div>
+        )}
+
         {/* Closed notice banner if applicable */}
         {isRoundClosed && (
           <div className="alert alert-warning border-0 rounded-4 shadow-sm mb-3 d-flex align-items-center gap-2">
@@ -398,9 +431,10 @@ export default function OrderPage() {
                     </button>
                   </div>
                   {cartItems.map((it) => {
+                    const itemKey = getCartKey(it.menu);
                     const uPrice = getItemUnitPrice(it);
                     return (
-                      <div key={it.menu.name} className="bg-white p-2 rounded-2 mb-2 border shadow-sm">
+                      <div key={itemKey} className="bg-white p-2 rounded-2 mb-2 border shadow-sm">
                         <div className="d-flex justify-content-between align-items-center mb-1">
                           <div>
                             <span className="text-dark small text-truncate fw-semibold d-block" style={{ maxWidth: '140px' }}>
@@ -426,7 +460,7 @@ export default function OrderPage() {
                               <button
                                 type="button"
                                 className="card-mini-stepper-btn minus"
-                                onClick={() => handleUpdateQuantity(it.menu.name, -1)}
+                                onClick={() => handleUpdateQuantity(itemKey, -1)}
                               >
                                 <i className="fa-solid fa-minus"></i>
                               </button>
@@ -434,7 +468,7 @@ export default function OrderPage() {
                               <button
                                 type="button"
                                 className="card-mini-stepper-btn plus"
-                                onClick={() => handleUpdateQuantity(it.menu.name, 1)}
+                                onClick={() => handleUpdateQuantity(itemKey, 1)}
                               >
                                 <i className="fa-solid fa-plus"></i>
                               </button>
@@ -450,14 +484,14 @@ export default function OrderPage() {
                           <button
                             type="button"
                             className={`card-mini-option-btn ${it.isExtra ? 'active' : ''}`}
-                            onClick={() => handleToggleOption(it.menu.name, 'isExtra')}
+                            onClick={() => handleToggleOption(itemKey, 'isExtra')}
                           >
                             ⭐ {it.isExtra ? 'พิเศษ (+10)' : 'พิเศษ'}
                           </button>
                           <button
                             type="button"
                             className={`card-mini-option-btn ${it.hasEgg ? 'active' : ''}`}
-                            onClick={() => handleToggleOption(it.menu.name, 'hasEgg')}
+                            onClick={() => handleToggleOption(itemKey, 'hasEgg')}
                           >
                             🍳 {it.hasEgg ? '+ไข่ดาว (+10)' : '+ไข่ดาว'}
                           </button>

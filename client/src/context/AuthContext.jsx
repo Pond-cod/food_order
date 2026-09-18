@@ -68,6 +68,36 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.error("LIFF Init Error:", err);
       setError(err.message);
+
+      // === BUG-03 FIX: Fallback สำหรับกรณี LIFF init ล้มเหลว ===
+      // ป้องกันหน้าจอค้างหรือว่างเปล่า ให้ผู้ใช้สั่งอาหารได้แม้ไม่มี LINE profile
+      try {
+        // ลองดึงข้อมูลเก่าจาก localStorage หากเคย login ไว้แล้ว
+        const savedUser = localStorage.getItem('liff_admin_user');
+        if (savedUser) {
+          const parsedUser = JSON.parse(savedUser);
+          if (parsedUser && parsedUser.userId) {
+            console.log("LIFF failed, using cached user profile from localStorage");
+            setUser(parsedUser);
+            try {
+              const adminCheck = await checkAdminStatus(parsedUser.userId, parsedUser.displayName);
+              setIsAdmin(adminCheck.isAdmin || false);
+              setAdminRole(adminCheck.role || '');
+            } catch (e) {}
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (localErr) {}
+
+      // ถ้าไม่มี cache เลย ใช้ anonymous user ให้สั่งอาหารได้
+      setUser({
+        userId: 'anonymous_' + Date.now(),
+        displayName: 'ผู้สั่งอาหาร',
+        pictureUrl: '',
+        statusMessage: '',
+        isAnonymous: true,
+      });
       setLoading(false);
     }
   }

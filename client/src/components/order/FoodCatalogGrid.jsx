@@ -69,7 +69,8 @@ export default function FoodCatalogGrid({
       ) : (
         <div className="food-grid">
           {filteredMenus.map((menu, idx) => {
-            const cartItem = cart[menu.name];
+            const cartKey = String(menu.id || menu.name || 'unknown');
+            const cartItem = cart[cartKey];
             const quantityInCart = cartItem ? cartItem.quantity : 0;
             const isInCart = quantityInCart > 0;
             const isSoldOut = (menu.status || '').toLowerCase() === 'sold out' || menu.status === 'ปิดขาย';
@@ -173,7 +174,7 @@ export default function FoodCatalogGrid({
                         <button
                           type="button"
                           className="card-mini-stepper-btn minus"
-                          onClick={() => onUpdateQuantity(menu.name, -1)}
+                          onClick={() => onUpdateQuantity(cartKey, -1)}
                           title="ลดจำนวน"
                         >
                           <i className="fa-solid fa-minus"></i>
@@ -182,7 +183,7 @@ export default function FoodCatalogGrid({
                         <button
                           type="button"
                           className="card-mini-stepper-btn plus"
-                          onClick={() => onUpdateQuantity(menu.name, 1)}
+                          onClick={() => onUpdateQuantity(cartKey, 1)}
                           title="เพิ่มจำนวน"
                         >
                           <i className="fa-solid fa-plus"></i>
@@ -209,7 +210,7 @@ export default function FoodCatalogGrid({
                       <button
                         type="button"
                         className={`card-mini-option-btn ${cartItem?.isExtra ? 'active' : ''}`}
-                        onClick={() => onToggleOption && onToggleOption(menu.name, 'isExtra')}
+                        onClick={() => onToggleOption && onToggleOption(cartKey, 'isExtra')}
                         title="สลับเป็น พิเศษ (+10 บาท)"
                       >
                         ⭐ {cartItem?.isExtra ? 'พิเศษ (+10)' : 'พิเศษ'}
@@ -217,7 +218,7 @@ export default function FoodCatalogGrid({
                       <button
                         type="button"
                         className={`card-mini-option-btn ${cartItem?.hasEgg ? 'active' : ''}`}
-                        onClick={() => onToggleOption && onToggleOption(menu.name, 'hasEgg')}
+                        onClick={() => onToggleOption && onToggleOption(cartKey, 'hasEgg')}
                         title="เพิ่มไข่ดาว (+10 บาท)"
                       >
                         🍳 {cartItem?.hasEgg ? '+ไข่ดาว (+10)' : '+ไข่ดาว'}
