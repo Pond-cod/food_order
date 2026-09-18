@@ -207,45 +207,43 @@ export default function OrderPage() {
     <div className="order-page-wrapper">
       <div className="container-fluid container-xl py-3 py-md-4">
         {/* Hero Header Banner */}
-        <div className="card border-0 shadow-sm rounded-4 p-3 p-md-4 mb-3 bg-white">
-          <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div className="hero-greeting-banner mb-3">
+          <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 position-relative" style={{ zIndex: 2 }}>
             {/* User Greeting & Avatar */}
             <div className="d-flex align-items-center gap-3">
-              <div className="position-relative" style={{ width: '52px', height: '52px', flexShrink: 0 }}>
+              <div className="position-relative" style={{ width: '56px', height: '56px', flexShrink: 0 }}>
                 <img
                   src={user?.pictureUrl || 'https://via.placeholder.com/80'}
                   alt="Avatar"
-                  className="rounded-circle border border-2 border-white shadow-sm w-100 h-100"
+                  className="rounded-circle border border-3 border-white shadow w-100 h-100"
                   style={{ objectFit: 'cover' }}
                   onError={(e) => { e.target.src = 'https://via.placeholder.com/80'; }}
                 />
                 <div
-                  className="position-absolute bottom-0 end-0 bg-success text-white rounded-circle d-flex align-items-center justify-content-center border border-2 border-white"
-                  style={{ width: '18px', height: '18px', fontSize: '9px' }}
+                  className="position-absolute bottom-0 end-0 bg-white text-success rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                  style={{ width: '20px', height: '20px', fontSize: '11px', border: '1px solid #10B981' }}
                 >
                   <i className="fa-brands fa-line"></i>
                 </div>
               </div>
               <div>
-                <div className="text-secondary small">สวัสดีคุณ</div>
-                <h5 className="mb-0 fw-bold text-dark text-truncate" style={{ maxWidth: '240px' }}>
+                <div className="text-white text-opacity-75 small" style={{ fontSize: '12px' }}>สวัสดีคุณยินดีต้อนรับ ✨</div>
+                <h4 className="mb-0 fw-bold text-white text-truncate" style={{ maxWidth: '260px', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
                   {user?.displayName || 'ผู้สั่งอาหาร'}
-                </h5>
+                </h4>
               </div>
             </div>
 
-            {/* Live Round Badge */}
-            <div className={`d-flex align-items-center gap-2 px-3 py-2 rounded-3 border ${
-              isRoundClosed 
-                ? 'bg-danger bg-opacity-10 border-danger border-opacity-25 text-danger' 
-                : 'bg-success bg-opacity-10 border-success border-opacity-25 text-success'
+            {/* Live Round Badge (Frosted Glass) */}
+            <div className={`round-badge-glass d-flex align-items-center gap-2 ${
+              isRoundClosed ? 'bg-danger bg-opacity-25 border-danger' : ''
             }`}>
-              <span className={`pulse-dot ${isRoundClosed ? 'bg-danger' : 'bg-success'}`}></span>
+              <span className={`pulse-dot ${isRoundClosed ? 'bg-danger' : 'bg-warning'}`} style={{ width: '10px', height: '10px' }}></span>
               <div>
-                <small className="text-muted d-block" style={{ fontSize: '11px' }}>
-                  {isRoundClosed ? 'สถานะรอบสั่งอาหาร:' : 'รอบการสั่งซื้อปัจจุบัน:'}
+                <small className="d-block text-white text-opacity-80" style={{ fontSize: '11px', lineHeight: 1.2 }}>
+                  {isRoundClosed ? 'สถานะการสั่งซื้อ:' : 'รอบเปิดรับอาหาร:'}
                 </small>
-                <strong className={isRoundClosed ? 'text-danger' : 'text-success'}>
+                <strong className="text-white" style={{ fontSize: '13.5px' }}>
                   {currentRound || 'รอบปกติ'}
                 </strong>
               </div>
@@ -274,11 +272,16 @@ export default function OrderPage() {
             />
 
             {/* Mobile-only Customization Box (Order inputs shown under catalog on mobile) */}
-            <div className="card border-0 shadow-sm rounded-4 p-3 p-sm-4 bg-white mb-4 d-lg-none">
-              <h6 className="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
-                <i className="fa-solid fa-sliders text-success"></i>
-                <span>ระบุรายละเอียดการจัดส่ง</span>
-              </h6>
+            <div className="card border-0 shadow-sm rounded-4 p-3 p-sm-4 bg-white mb-4 d-lg-none" style={{ border: '1px solid rgba(226, 232, 240, 0.8)' }}>
+              <div className="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <div 
+                  className="rounded-3 d-flex align-items-center justify-content-center text-white" 
+                  style={{ width: '30px', height: '30px', background: 'linear-gradient(135deg, #FF6B35, #F59E0B)' }}
+                >
+                  <i className="fa-solid fa-sliders" style={{ fontSize: '13px' }}></i>
+                </div>
+                <h6 className="fw-bold text-dark mb-0">ระบุรายละเอียดการจัดส่ง</h6>
+              </div>
 
               <QuantityStepper
                 quantity={quantity}
@@ -301,16 +304,35 @@ export default function OrderPage() {
 
           {/* Right Column: Desktop Sticky Order Panel (35% on Desktop, Hidden on Mobile) */}
           <div className="col-12 col-lg-5 col-xl-4 d-none d-lg-block">
-            <div className="card border-0 shadow-sm rounded-4 p-4 desktop-sticky-panel bg-white">
-              <h5 className="fw-bold text-dark mb-3 d-flex align-items-center gap-2 pb-2 border-bottom">
-                <i className="fa-solid fa-basket-shopping text-success"></i>
-                <span>สรุปการสั่งอาหาร</span>
-              </h5>
+            <div className="card border-0 shadow-sm rounded-4 p-4 desktop-sticky-panel bg-white" style={{ border: '1px solid rgba(226, 232, 240, 0.8)' }}>
+              <div className="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom">
+                <div className="d-flex align-items-center gap-2">
+                  <div 
+                    className="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                    style={{ width: '34px', height: '34px', background: 'linear-gradient(135deg, #06C755, #05A044)' }}
+                  >
+                    <i className="fa-solid fa-basket-shopping" style={{ fontSize: '15px' }}></i>
+                  </div>
+                  <h5 className="fw-bold text-dark mb-0">สรุปการสั่งอาหาร</h5>
+                </div>
+                {selectedMenu && (
+                  <span className="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-1" style={{ fontSize: '11px' }}>
+                    พร้อมสั่ง 1 รายการ
+                  </span>
+                )}
+              </div>
 
               {/* Selected Menu Preview */}
               {selectedMenu ? (
-                <div className="card border p-2 rounded-3 mb-3 bg-success bg-opacity-10 border-success border-opacity-25 d-flex flex-row align-items-center gap-3">
-                  <div className="rounded-2 overflow-hidden bg-light flex-shrink-0" style={{ width: '60px', height: '60px' }}>
+                <div 
+                  className="p-3 rounded-4 mb-3 d-flex flex-row align-items-center gap-3"
+                  style={{
+                    background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
+                    border: '1.5px solid #10B981',
+                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.15)',
+                  }}
+                >
+                  <div className="rounded-3 overflow-hidden bg-white shadow-sm flex-shrink-0" style={{ width: '64px', height: '64px' }}>
                     {selectedMenu.imageUrl ? (
                       <img
                         src={selectedMenu.imageUrl}
@@ -319,20 +341,32 @@ export default function OrderPage() {
                         style={{ objectFit: 'cover' }}
                       />
                     ) : (
-                      <div className="w-100 h-100 d-flex align-items-center justify-content-center text-muted">
-                        <i className="fa-solid fa-bowl-food fs-4"></i>
+                      <div className="w-100 h-100 d-flex align-items-center justify-content-center text-warning" style={{ background: '#FFFBEB' }}>
+                        <i className="fa-solid fa-bowl-food fs-3"></i>
                       </div>
                     )}
                   </div>
                   <div className="overflow-hidden flex-grow-1">
-                    <h6 className="fw-bold text-dark mb-1 text-truncate">{selectedMenu.name}</h6>
-                    <div className="text-success fw-bold">{formatCurrency(selectedMenu.price)} / กล่อง</div>
+                    <span className="badge bg-success text-white rounded-pill px-2 py-0 mb-1" style={{ fontSize: '10px' }}>
+                      ✓ เลือกแล้ว
+                    </span>
+                    <h6 className="fw-bold text-dark mb-0 text-truncate">{selectedMenu.name}</h6>
+                    <div className="text-success fw-bold" style={{ fontSize: '15px' }}>
+                      {formatCurrency(selectedMenu.price)} / กล่อง
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="card border border-dashed rounded-3 p-3 text-center text-muted mb-3 bg-light">
-                  <i className="fa-solid fa-hand-pointer fs-4 d-block mb-1 text-secondary opacity-50"></i>
-                  <small>กรุณาคลิกเลือกเมนูอาหารจากตารางฝั่งซ้าย</small>
+                <div 
+                  className="rounded-4 p-3 text-center mb-3"
+                  style={{
+                    background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+                    border: '2px dashed #F59E0B',
+                  }}
+                >
+                  <div className="fs-3 mb-1">🍱 👈</div>
+                  <div className="fw-bold text-dark" style={{ fontSize: '13.5px' }}>แตะเลือกเมนูที่ต้องการสั่ง</div>
+                  <small className="text-secondary" style={{ fontSize: '11.5px' }}>คลิกเลือกเมนูอาหารจากตารางฝั่งซ้ายได้เลยครับ</small>
                 </div>
               )}
 

@@ -18,9 +18,17 @@ export default function FoodCatalogGrid({
       {/* Search & Header */}
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div className="d-flex align-items-center gap-2">
-          <span className="fs-5">🍱</span>
+          <div 
+            className="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm"
+            style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, #FF6B35, #F59E0B)' }}
+          >
+            <i className="fa-solid fa-utensils" style={{ fontSize: '14px' }}></i>
+          </div>
           <h5 className="fw-bold text-dark mb-0">รายการอาหารเปิดสั่ง</h5>
-          <span className="badge bg-success bg-opacity-10 text-success rounded-pill px-2">
+          <span 
+            className="badge rounded-pill px-2 py-1 text-white shadow-sm"
+            style={{ background: 'linear-gradient(135deg, #10B981, #059669)', fontSize: '11px' }}
+          >
             {menus.length} เมนู
           </span>
         </div>
@@ -85,16 +93,26 @@ export default function FoodCatalogGrid({
                         e.target.style.display = 'none';
                         if (e.target.parentElement) {
                           e.target.parentElement.innerHTML = `
-                            <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center text-muted bg-light">
-                              <i class="fa-solid fa-bowl-food fs-3 mb-1 text-secondary opacity-50"></i>
+                            <div class="food-placeholder-warm">
+                              <div class="food-placeholder-icon-wrap">
+                                <span>🍲</span>
+                              </div>
+                              <small class="fw-bold" style="font-size: 11px; color: #D97706;">
+                                เมนูอร่อย
+                              </small>
                             </div>
                           `;
                         }
                       }}
                     />
                   ) : (
-                    <div className="w-100 h-100 d-flex flex-column align-items-center justify-content-center text-muted bg-light">
-                      <i className="fa-solid fa-bowl-food fs-3 mb-1 text-secondary opacity-50"></i>
+                    <div className="food-placeholder-warm">
+                      <div className="food-placeholder-icon-wrap">
+                        <span>🍛</span>
+                      </div>
+                      <small className="fw-bold" style={{ fontSize: '11px', color: '#D97706' }}>
+                        เมนูแนะนำ
+                      </small>
                     </div>
                   )}
 
@@ -141,15 +159,17 @@ export default function FoodCatalogGrid({
                         ปิดขาย
                       </span>
                     ) : isSelected ? (
-                      <span className="badge bg-success text-white rounded-pill px-2 py-1 d-flex align-items-center gap-1" style={{ fontSize: '11px' }}>
+                      <span 
+                        className="badge text-white rounded-pill px-2 py-1 d-flex align-items-center gap-1 shadow-sm"
+                        style={{ background: 'linear-gradient(135deg, #06C755, #05A044)', fontSize: '11px' }}
+                      >
                         <i className="fa-solid fa-check" style={{ fontSize: '9px' }}></i>
                         <span>เลือกแล้ว</span>
                       </span>
                     ) : (
                       <button
                         type="button"
-                        className="btn btn-sm btn-light border text-success rounded-pill px-2 py-0 fw-semibold d-flex align-items-center gap-1 shadow-sm"
-                        style={{ fontSize: '11px', height: '26px' }}
+                        className="btn-select-food shadow-sm"
                       >
                         <i className="fa-solid fa-plus" style={{ fontSize: '9px' }}></i>
                         <span>เลือก</span>

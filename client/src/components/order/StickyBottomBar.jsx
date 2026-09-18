@@ -44,7 +44,7 @@ export default function StickyBottomBar({
           <div className="flex-shrink-0">
             <button
               type="button"
-              className="btn btn-line rounded-pill px-3 py-2 fw-bold shadow-sm d-flex align-items-center gap-2"
+              className="btn btn-order-submit rounded-pill px-3 py-2 fw-bold d-flex align-items-center gap-2"
               style={{ fontSize: '14px' }}
               disabled={!selectedMenu || isSubmitting}
               onClick={onSubmit}
@@ -56,12 +56,12 @@ export default function StickyBottomBar({
                 </>
               ) : selectedMenu ? (
                 <>
-                  <i className="fa-solid fa-circle-check"></i>
+                  <i className="fa-solid fa-circle-check fs-6"></i>
                   <span>สั่งเลย ({formatCurrency(total)})</span>
                 </>
               ) : (
                 <>
-                  <i className="fa-solid fa-bowl-food"></i>
+                  <i className="fa-solid fa-utensils fs-6"></i>
                   <span>เลือกเมนู</span>
                 </>
               )}
