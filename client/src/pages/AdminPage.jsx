@@ -26,8 +26,21 @@ import ImageModal from '../components/common/ImageModal';
 export default function AdminPage({ onNavigateOrder }) {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('menu');
-  const [dashboardData, setDashboardData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_admin_dashboard');
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [isLoading, setIsLoading] = useState(() => {
+    try {
+      return !localStorage.getItem('cached_admin_dashboard');
+    } catch (e) {
+      return true;
+    }
+  });
   const [isSaving, setIsSaving] = useState(false);
 
   // Modals state
@@ -48,13 +61,23 @@ export default function AdminPage({ onNavigateOrder }) {
 
   async function loadDashboard() {
     try {
-      setIsLoading(true);
+      // ถ้าไม่มีแคช ให้แสดงหน้าโหลด แต่ถ้ามีแคชแล้ว ให้โหลดเงียบๆ ในพื้นหลัง
+      if (!dashboardData) setIsLoading(true);
       const res = await getAdminDashboard();
       if (res.status === 'success') {
         setDashboardData(res.data);
+        try {
+          localStorage.setItem('cached_admin_dashboard', JSON.stringify(res.data));
+        } catch (e) {}
       }
     } catch (err) {
-      Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
+      Swal.fire({
+        icon: 'error',
+        title: 'เชื่อมต่อล้มเหลว',
+        text: err.message.includes('404') 
+          ? 'URL ของ Google Apps Script Web App เปลี่ยนไป (HTTP 404) กรุณาคัดลอก Web App URL ใหม่จากหน้า Deploy มาใส่ในระบบ' 
+          : err.message
+      });
     } finally {
       setIsLoading(false);
     }
