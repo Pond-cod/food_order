@@ -87,7 +87,22 @@ export default function OrderPage() {
       }
       return {
         ...prev,
-        [menu.name]: { menu, quantity: 1 },
+        [menu.name]: { menu, quantity: 1, isExtra: false, hasEgg: false },
+      };
+    });
+  }
+
+  // สลับตัวเลือกเสริม (เช่น พิเศษ, ไข่ดาว)
+  function handleToggleOption(menuName, optionKey) {
+    setCart((prev) => {
+      const existing = prev[menuName];
+      if (!existing) return prev;
+      return {
+        ...prev,
+        [menuName]: {
+          ...existing,
+          [optionKey]: !existing[optionKey],
+        },
       };
     });
   }
@@ -124,10 +139,25 @@ export default function OrderPage() {
     setCart({});
   }
 
+  // คำนวณราคาต่อหน่วยรวมตัวเลือกเสริม
+  function getItemUnitPrice(item) {
+    const base = Number(item.menu.price) || 0;
+    const extra = item.isExtra ? 10 : 0;
+    const egg = item.hasEgg ? 10 : 0;
+    return base + extra + egg;
+  }
+
+  function getItemDisplayName(item) {
+    const tags = [];
+    if (item.isExtra) tags.push('พิเศษ');
+    if (item.hasEgg) tags.push('+ไข่ดาว');
+    return tags.length > 0 ? `${item.menu.name} (${tags.join(', ')})` : item.menu.name;
+  }
+
   // คำนวณสรุปยอดตะกร้า
   const cartItems = Object.values(cart);
   const totalBoxes = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = cartItems.reduce((sum, item) => sum + (item.quantity * (Number(item.menu.price) || 0)), 0);
+  const totalPrice = cartItems.reduce((sum, item) => sum + (item.quantity * getItemUnitPrice(item)), 0);
 
   async function handleSubmitOrder() {
     if (cartItems.length === 0) {
@@ -173,13 +203,20 @@ export default function OrderPage() {
           </div>
           <hr style="margin: 10px 0; border: 0; border-top: 1px dashed #CBD5E1;">
           <div style="font-weight: bold; color: #1E293B; margin-bottom: 6px;">รายการที่สั่ง (${cartItems.length} เมนู):</div>
-          <div style="max-height: 150px; overflow-y: auto; margin-bottom: 8px;">
-            ${cartItems.map(it => `
-              <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 13px;">
-                <span>• ${it.menu.name} <b style="color: #05A044;">x${it.quantity}</b></span>
-                <strong>฿${(Number(it.menu.price) * it.quantity).toLocaleString()}</strong>
-              </div>
-            `).join('')}
+          <div style="max-height: 160px; overflow-y: auto; margin-bottom: 8px;">
+            ${cartItems.map(it => {
+              const uPrice = getItemUnitPrice(it);
+              const tags = [];
+              if (it.isExtra) tags.push('พิเศษ');
+              if (it.hasEgg) tags.push('+ไข่ดาว');
+              const tagDisplay = tags.length > 0 ? ` <span style="color: #D97706; font-size: 11.5px; font-weight: 600;">(${tags.join(', ')})</span>` : '';
+              return `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 13px;">
+                  <span>• <strong>${it.menu.name}</strong>${tagDisplay} <b style="color: #05A044;">x${it.quantity}</b></span>
+                  <strong>฿${(uPrice * it.quantity).toLocaleString()}</strong>
+                </div>
+              `;
+            }).join('')}
           </div>
           <hr style="margin: 8px 0; border: 0; border-top: 1.5px solid #CBD5E1;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -217,13 +254,19 @@ export default function OrderPage() {
         phone: phone || '-',
         department: department || '-',
         note: note || '-',
-        items: cartItems.map(it => ({
-          menuName: it.menu.name,
-          quantity: it.quantity,
-          price: Number(it.menu.price) || 0,
-          note: note || '-',
-        })),
-        menuName: cartItems.map(it => `${it.menu.name} x${it.quantity}`).join(', '),
+        items: cartItems.map(it => {
+          const uPrice = getItemUnitPrice(it);
+          return {
+            menuName: getItemDisplayName(it),
+            baseMenuName: it.menu.name,
+            quantity: it.quantity,
+            price: uPrice,
+            isExtra: Boolean(it.isExtra),
+            hasEgg: Boolean(it.hasEgg),
+            note: note || '-',
+          };
+        }),
+        menuName: cartItems.map(it => `${getItemDisplayName(it)} x${it.quantity}`).join(', '),
         quantity: totalBoxes,
       });
 
@@ -323,6 +366,7 @@ export default function OrderPage() {
               cart={cart}
               onAddToCart={handleAddToCart}
               onUpdateQuantity={handleUpdateQuantity}
+              onToggleOption={handleToggleOption}
             />
 
             {/* Mobile-only Customization Box (Order inputs shown under catalog on mobile) */}
@@ -353,33 +397,74 @@ export default function OrderPage() {
                       ล้างตะกร้า
                     </button>
                   </div>
-                  {cartItems.map(({ menu, quantity }) => (
-                    <div key={menu.name} className="d-flex justify-content-between align-items-center bg-white p-2 rounded-2 mb-1 border shadow-sm">
-                      <span className="text-dark small text-truncate fw-semibold" style={{ maxWidth: '140px' }}>{menu.name}</span>
-                      <div className="d-flex align-items-center gap-2">
-                        <div className="card-mini-stepper">
+                  {cartItems.map((it) => {
+                    const uPrice = getItemUnitPrice(it);
+                    return (
+                      <div key={it.menu.name} className="bg-white p-2 rounded-2 mb-2 border shadow-sm">
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                          <div>
+                            <span className="text-dark small text-truncate fw-semibold d-block" style={{ maxWidth: '140px' }}>
+                              {it.menu.name}
+                            </span>
+                            {(it.isExtra || it.hasEgg) && (
+                              <div className="d-flex gap-1 mt-1">
+                                {it.isExtra && (
+                                  <span className="badge bg-warning text-dark py-0 px-1" style={{ fontSize: '9.5px' }}>
+                                    ⭐ พิเศษ
+                                  </span>
+                                )}
+                                {it.hasEgg && (
+                                  <span className="badge bg-success bg-opacity-10 text-success border border-success py-0 px-1" style={{ fontSize: '9.5px' }}>
+                                    🍳 +ไข่ดาว
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className="d-flex align-items-center gap-2">
+                            <div className="card-mini-stepper">
+                              <button
+                                type="button"
+                                className="card-mini-stepper-btn minus"
+                                onClick={() => handleUpdateQuantity(it.menu.name, -1)}
+                              >
+                                <i className="fa-solid fa-minus"></i>
+                              </button>
+                              <span className="card-mini-stepper-count">{it.quantity}</span>
+                              <button
+                                type="button"
+                                className="card-mini-stepper-btn plus"
+                                onClick={() => handleUpdateQuantity(it.menu.name, 1)}
+                              >
+                                <i className="fa-solid fa-plus"></i>
+                              </button>
+                            </div>
+                            <span className="fw-bold text-success small" style={{ minWidth: '48px', textAlign: 'right' }}>
+                              ฿{(uPrice * it.quantity).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Mobile Option Chips */}
+                        <div className="d-flex gap-1 pt-1 border-top border-light">
                           <button
                             type="button"
-                            className="card-mini-stepper-btn minus"
-                            onClick={() => handleUpdateQuantity(menu.name, -1)}
+                            className={`card-mini-option-btn ${it.isExtra ? 'active' : ''}`}
+                            onClick={() => handleToggleOption(it.menu.name, 'isExtra')}
                           >
-                            <i className="fa-solid fa-minus"></i>
+                            ⭐ {it.isExtra ? 'พิเศษ (+10)' : 'พิเศษ'}
                           </button>
-                          <span className="card-mini-stepper-count">{quantity}</span>
                           <button
                             type="button"
-                            className="card-mini-stepper-btn plus"
-                            onClick={() => handleUpdateQuantity(menu.name, 1)}
+                            className={`card-mini-option-btn ${it.hasEgg ? 'active' : ''}`}
+                            onClick={() => handleToggleOption(it.menu.name, 'hasEgg')}
                           >
-                            <i className="fa-solid fa-plus"></i>
+                            🍳 {it.hasEgg ? '+ไข่ดาว (+10)' : '+ไข่ดาว'}
                           </button>
                         </div>
-                        <span className="fw-bold text-success small" style={{ minWidth: '45px', textAlign: 'right' }}>
-                          ฿{(Number(menu.price) * quantity).toLocaleString()}
-                        </span>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
@@ -425,6 +510,7 @@ export default function OrderPage() {
                 onUpdateQuantity={handleUpdateQuantity}
                 onRemoveItem={handleRemoveFromCart}
                 onClearCart={handleClearCart}
+                onToggleOption={handleToggleOption}
                 onSubmit={handleSubmitOrder}
                 isSubmitting={isSubmitting}
               />

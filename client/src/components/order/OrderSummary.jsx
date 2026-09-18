@@ -8,6 +8,7 @@ export default function OrderSummary({
   onUpdateQuantity,
   onRemoveItem,
   onClearCart,
+  onToggleOption,
   onSubmit,
   isSubmitting,
 }) {
@@ -35,24 +36,40 @@ export default function OrderSummary({
             )}
           </div>
 
-          <div style={{ maxHeight: '280px', overflowY: 'auto' }} className="pe-1">
-            {cartItems.map(({ menu, quantity }) => {
-              const unitPrice = Number(menu.price) || 0;
+          <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="pe-1">
+            {cartItems.map(({ menu, quantity, isExtra, hasEgg }) => {
+              const unitPrice = (Number(menu.price) || 0) + (isExtra ? 10 : 0) + (hasEgg ? 10 : 0);
               const subtotal = unitPrice * quantity;
 
               return (
                 <div key={menu.name} className="cart-summary-item shadow-sm">
                   <div className="d-flex justify-content-between align-items-start gap-2 mb-1">
-                    <strong className="text-dark text-truncate" style={{ fontSize: '13px', maxWidth: '170px' }}>
-                      {menu.name}
-                    </strong>
+                    <div>
+                      <strong className="text-dark text-truncate d-block" style={{ fontSize: '13px', maxWidth: '170px' }}>
+                        {menu.name}
+                      </strong>
+                      {(isExtra || hasEgg) && (
+                        <div className="d-flex gap-1 mt-1">
+                          {isExtra && (
+                            <span className="badge bg-warning text-dark py-0 px-1" style={{ fontSize: '10px' }}>
+                              ⭐ พิเศษ
+                            </span>
+                          )}
+                          {hasEgg && (
+                            <span className="badge bg-success bg-opacity-10 text-success border border-success py-0 px-1" style={{ fontSize: '10px' }}>
+                              🍳 +ไข่ดาว
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     <span className="fw-bold text-success" style={{ fontSize: '13.5px' }}>
                       {formatCurrency(subtotal)}
                     </span>
                   </div>
 
-                  <div className="d-flex justify-content-between align-items-center">
-                    <small className="text-muted" style={{ fontSize: '11px' }}>
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <small className="text-muted" style={{ fontSize: '11.5px' }}>
                       {formatCurrency(unitPrice)} / กล่อง
                     </small>
 
@@ -89,6 +106,29 @@ export default function OrderSummary({
                         </button>
                       )}
                     </div>
+                  </div>
+
+                  {/* Option Chips: พิเศษ (+10), เพิ่มไข่ดาว (+10) */}
+                  <div className="cart-option-group pt-1 border-top border-light">
+                    <button
+                      type="button"
+                      className={`cart-option-btn ${isExtra ? 'active' : ''}`}
+                      onClick={() => onToggleOption && onToggleOption(menu.name, 'isExtra')}
+                      title="สลับเป็น พิเศษ (+10 บาท)"
+                    >
+                      <span>{isExtra ? '✓ ⭐ พิเศษ' : '⭐ พิเศษ'}</span>
+                      <span className="price-tag">+฿10</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`cart-option-btn ${hasEgg ? 'active' : ''}`}
+                      onClick={() => onToggleOption && onToggleOption(menu.name, 'hasEgg')}
+                      title="เพิ่มไข่ดาว (+10 บาท)"
+                    >
+                      <span>{hasEgg ? '✓ 🍳 +ไข่ดาว' : '🍳 +ไข่ดาว'}</span>
+                      <span className="price-tag">+฿10</span>
+                    </button>
                   </div>
                 </div>
               );

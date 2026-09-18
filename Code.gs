@@ -399,6 +399,14 @@ function doPost(e) {
 
       // เตรียมชุดข้อมูลสำหรับเขียนลงชีทแบบ Batch (เร็วกว่า appendRow ทีละแถวมาก)
       const rowsToAdd = validItems.map(item => {
+        let finalMenuName = String(item.menuName || '').trim();
+        const extras = [];
+        if (item.isExtra && !finalMenuName.includes('พิเศษ')) extras.push('พิเศษ');
+        if (item.hasEgg && !finalMenuName.includes('ไข่ดาว')) extras.push('+ไข่ดาว');
+        if (extras.length > 0) {
+          finalMenuName += ` (${extras.join(', ')})`;
+        }
+
         const itemNote = (item.note && String(item.note).trim() !== "-" && String(item.note).trim() !== "") 
           ? String(item.note).trim() 
           : generalNote;
@@ -407,7 +415,7 @@ function doPost(e) {
           round,
           userId,
           displayName,
-          String(item.menuName).trim(),
+          finalMenuName,
           parseInt(item.quantity, 10) || 1,
           itemNote,
           status,

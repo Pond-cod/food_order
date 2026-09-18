@@ -6,6 +6,7 @@ export default function FoodCatalogGrid({
   cart = {},
   onAddToCart,
   onUpdateQuantity,
+  onToggleOption,
 }) {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -153,7 +154,11 @@ export default function FoodCatalogGrid({
 
                   <div className="d-flex align-items-center justify-content-between mt-2 pt-1 border-top border-light">
                     <span className="fw-bold text-success" style={{ fontSize: '14px' }}>
-                      {formatCurrency(menu.price)}
+                      {formatCurrency(
+                        (Number(menu.price) || 0) +
+                        (cartItem?.isExtra ? 10 : 0) +
+                        (cartItem?.hasEgg ? 10 : 0)
+                      )}
                     </span>
 
                     {isSoldOut ? (
@@ -197,6 +202,28 @@ export default function FoodCatalogGrid({
                       </button>
                     )}
                   </div>
+
+                  {/* Quick Mini Option Chips when selected in cart */}
+                  {isInCart && (
+                    <div className="card-mini-options mt-2 pt-1 border-top border-light" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className={`card-mini-option-btn ${cartItem?.isExtra ? 'active' : ''}`}
+                        onClick={() => onToggleOption && onToggleOption(menu.name, 'isExtra')}
+                        title="สลับเป็น พิเศษ (+10 บาท)"
+                      >
+                        ⭐ {cartItem?.isExtra ? 'พิเศษ (+10)' : 'พิเศษ'}
+                      </button>
+                      <button
+                        type="button"
+                        className={`card-mini-option-btn ${cartItem?.hasEgg ? 'active' : ''}`}
+                        onClick={() => onToggleOption && onToggleOption(menu.name, 'hasEgg')}
+                        title="เพิ่มไข่ดาว (+10 บาท)"
+                      >
+                        🍳 {cartItem?.hasEgg ? '+ไข่ดาว (+10)' : '+ไข่ดาว'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );
