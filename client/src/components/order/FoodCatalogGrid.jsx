@@ -67,13 +67,13 @@ export default function FoodCatalogGrid({
         </div>
       ) : (
         <div className="food-grid">
-          {filteredMenus.map((menu) => {
-            const isSelected = selectedMenu && (selectedMenu.rowIndex === menu.rowIndex || selectedMenu.name === menu.name);
+          {filteredMenus.map((menu, idx) => {
+            const isSelected = Boolean(selectedMenu && selectedMenu.name === menu.name);
             const isSoldOut = (menu.status || '').toLowerCase() === 'sold out' || menu.status === 'ปิดขาย';
 
             return (
               <div
-                key={menu.rowIndex || menu.name}
+                key={menu.id || menu.name || idx}
                 className={`food-card-modern ${isSelected ? 'selected' : ''} ${isSoldOut ? 'opacity-50' : ''}`}
                 onClick={() => {
                   if (!isSoldOut) {
