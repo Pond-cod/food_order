@@ -28,12 +28,17 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API Routes
-app.use('/api/menu', menuRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/round', roundRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/upload', uploadRoutes);
+// API Routes (รองรับทั้ง /api/... และ /... สำหรับ Vercel Serverless)
+const registerEndpoints = (prefix = '') => {
+  app.use(`${prefix}/menu`, menuRoutes);
+  app.use(`${prefix}/orders`, orderRoutes);
+  app.use(`${prefix}/round`, roundRoutes);
+  app.use(`${prefix}/admin`, adminRoutes);
+  app.use(`${prefix}/upload`, uploadRoutes);
+};
+
+registerEndpoints('/api');
+registerEndpoints('');
 
 // 404 Handler
 app.use((req, res) => {
