@@ -64,6 +64,36 @@ export async function updateOrderStatus(rowIndex, newStatus) {
 }
 
 /**
+ * บันทึกการตั้งค่าหน้าสั่งอาหาร (รอบ, วันที่, และสถานะเปิด/ปิดขายของแต่ละเมนู)
+ */
+export async function saveSchedule(scheduleData) {
+  return await apiRequest('/admin/schedule', {
+    method: 'POST',
+    body: JSON.stringify(scheduleData),
+  });
+}
+
+/**
+ * สลับสถานะเปิดใช้งาน / ปิดใช้งานสิทธิ์ผู้ดูแลระบบ (Active / Inactive)
+ */
+export async function toggleAdminStatus(rowIndex, newStatus) {
+  return await apiRequest('/admin/admins/status', {
+    method: 'PATCH',
+    body: JSON.stringify({ rowIndex, newStatus }),
+  });
+}
+
+/**
+ * แก้ไขข้อมูลผู้ดูแลระบบ (ชื่อ, LINE User ID, Role)
+ */
+export async function editAdmin(rowIndex, userId, name, role) {
+  return await apiRequest(`/admin/admins/${rowIndex}`, {
+    method: 'PUT',
+    body: JSON.stringify({ userId, name, role }),
+  });
+}
+
+/**
  * เพิ่มผู้ดูแลระบบใหม่
  */
 export async function addAdmin(newAdminUserId, newAdminName, role = 'Admin') {

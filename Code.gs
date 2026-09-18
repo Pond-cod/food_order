@@ -52,6 +52,16 @@ function checkAdminUser(ss, userId, displayName) {
   for (let i = 1; i < data.length; i++) {
     const rowUserId = String(data[i][0] || "").trim();
     if (rowUserId === String(userId).trim()) {
+      const status = String(data[i][4] || "Active").trim();
+      if (status.toLowerCase() === "inactive" || status === "ปิดใช้งาน") {
+        return {
+          isAdmin: false,
+          isInactive: true,
+          role: String(data[i][2] || "Admin"),
+          displayName: String(data[i][1] || ""),
+          message: "สิทธิ์ผู้ดูแลระบบของคุณถูกปิดใช้งานชั่วคราว"
+        };
+      }
       return {
         isAdmin: true,
         role: String(data[i][2] || "Admin"),
@@ -200,7 +210,8 @@ function doGet(e) {
               userId: String(aData[i][0]),
               displayName: String(aData[i][1] || ""),
               role: String(aData[i][2] || "Admin"),
-              createdAt: String(aData[i][3] || "")
+              createdAt: String(aData[i][3] || ""),
+              status: String(aData[i][4] || "Active").trim()
             });
           }
         }
@@ -514,6 +525,97 @@ function doPost(e) {
         return jsonResponse({ status: "success", message: "ลบสิทธิ์ผู้ดูแลเรียบร้อยแล้ว" });
       }
       throw new Error("ไม่พบข้อมูลผู้ดูแล");
+    }
+
+    // 8. กำหนดหน้าสั่งอาหารแบบครบวงจร (updateSchedule: รอบ + วันที่ + เลือกเมนู)
+    if (action === "updateSchedule") {
+      const roundTitle = String(payload.roundTitle || "").trim();
+      const menuStatusMap = payload.menuStatusMap || {};
+
+      if (!roundTitle) throw new Error("กรุณาระบุชื่อรอบสั่งอาหาร");
+
+      // 1. ปรับ CurrentRound ในชีท Settings
+      let settingsSheet = ss.getSheetByName("Settings");
+      if (!settingsSheet) {
+        settingsSheet = ss.insertSheet("Settings");
+        settingsSheet.appendRow(["CurrentRound", roundTitle]);
+      } else {
+        const sData = settingsSheet.getDataRange().getValues();
+        let found = false;
+        for (let i = 0; i < sData.length; i++) {
+          const key = String(sData[i][0]).trim().toLowerCase();
+          if (key === "currentround" || key === "รอบปัจจุบัน") {
+            settingsSheet.getRange(i + 1, 2).setValue(roundTitle);
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          settingsSheet.appendRow(["CurrentRound", roundTitle]);
+        }
+      }
+
+      // 2. ปรับสถานะเปิด/ปิดขาย (Available / Sold Out) ของแต่ละเมนูตามที่ติ๊กเลือก
+      const menuSheet = ss.getSheetByName("Menu") || ss.getSheets()[0];
+      if (menuSheet && menuStatusMap && Object.keys(menuStatusMap).length > 0) {
+        const lastRow = menuSheet.getLastRow();
+        for (let r = 2; r <= lastRow; r++) {
+          if (menuStatusMap.hasOwnProperty(r)) {
+            const isAvailable = !!menuStatusMap[r];
+            menuSheet.getRange(r, 3).setValue(isAvailable ? "Available" : "Sold Out");
+          }
+        }
+      }
+
+      // ล้าง Cache เพื่อให้ลูกค้าเห็นรอบและเมนูใหม่ทันที
+      try {
+        CacheService.getScriptCache().remove("appData_fast_cache");
+      } catch (cErr) {}
+
+      return jsonResponse({
+        status: "success",
+        message: "บันทึกการตั้งค่าหน้าสั่งอาหารและเมนูประจำวันสำเร็จ",
+        roundTitle: roundTitle
+      });
+    }
+
+    // 9. สลับสถานะผู้ดูแล Active / Inactive (toggleAdminStatus)
+    if (action === "toggleAdminStatus") {
+      const rowIndex = parseInt(payload.rowIndex, 10);
+      const newStatus = payload.newStatus === "Inactive" ? "Inactive" : "Active";
+      const adminSheet = ss.getSheetByName("Admins");
+
+      if (rowIndex > 1 && adminSheet) {
+        if (adminSheet.getLastColumn() < 5) {
+          adminSheet.getRange(1, 5).setValue("Status");
+        }
+        adminSheet.getRange(rowIndex, 5).setValue(newStatus);
+        return jsonResponse({
+          status: "success",
+          message: `ปรับสถานะผู้ดูแลเป็น ${newStatus} แล้ว`
+        });
+      }
+      throw new Error("ไม่พบข้อมูลผู้ดูแลระบบ");
+    }
+
+    // 10. แก้ไขข้อมูลผู้ดูแลระบบ (editAdmin)
+    if (action === "editAdmin") {
+      const rowIndex = parseInt(payload.rowIndex, 10);
+      const newUserId = String(payload.userId || "").trim();
+      const newName = String(payload.name || "").trim();
+      const role = payload.role || "Admin";
+      const adminSheet = ss.getSheetByName("Admins");
+
+      if (rowIndex > 1 && adminSheet) {
+        if (newUserId) adminSheet.getRange(rowIndex, 1).setValue(newUserId);
+        if (newName) adminSheet.getRange(rowIndex, 2).setValue(newName);
+        if (role) adminSheet.getRange(rowIndex, 3).setValue(role);
+        return jsonResponse({
+          status: "success",
+          message: "แก้ไขข้อมูลผู้ดูแลเรียบร้อยแล้ว"
+        });
+      }
+      throw new Error("ไม่พบข้อมูลผู้ดูแลระบบ");
     }
 
     throw new Error("ไม่พบคำสั่ง (Unknown Action)");

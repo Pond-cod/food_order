@@ -1,31 +1,80 @@
 import React from 'react';
 
-export default function AdminTabs({ activeTab, onTabChange }) {
+export default function AdminTabs({ activeTab, onTabChange, ordersCount = 0 }) {
   const tabs = [
-    { id: 'menu', label: 'จัดการเมนูประจำวัน', icon: 'fa-solid fa-bowl-rice' },
-    { id: 'round', label: 'ตั้งค่ารอบการสั่ง', icon: 'fa-regular fa-clock' },
-    { id: 'orders', label: 'ออเดอร์ & ครัว', icon: 'fa-solid fa-clipboard-list' },
-    { id: 'admins', label: 'ผู้ดูแลระบบ', icon: 'fa-solid fa-users-gear' },
+    { 
+      id: 'schedule', 
+      label: 'กำหนดหน้าสั่งอาหาร', 
+      icon: 'fa-solid fa-calendar-check',
+      description: 'รอบสั่ง, วันที่ & เมนูเปิดขาย'
+    },
+    { 
+      id: 'menus', 
+      label: 'จัดการเมนูทั้งหมด', 
+      icon: 'fa-solid fa-utensils',
+      description: 'เพิ่ม/แก้ไข/ลบ/ปิด เมนู'
+    },
+    { 
+      id: 'kitchen', 
+      label: 'ออเดอร์ & ครัว', 
+      icon: 'fa-solid fa-fire-burner',
+      description: 'สรุปยอดครัว & รายการสั่งซื้อ',
+      isProminent: true,
+    },
+    { 
+      id: 'admins', 
+      label: 'ผู้ดูแลระบบ', 
+      icon: 'fa-solid fa-user-shield',
+      description: 'สิทธิ์ผู้ดูแล & เปิด/ปิด'
+    },
   ];
 
   return (
-    <div className="overflow-x-auto pb-2 mb-3">
-      <ul className="nav nav-pills flex-nowrap gap-2">
-        {tabs.map((tab) => (
-          <li className="nav-item" key={tab.id}>
+    <div className="overflow-x-auto pb-2 mb-4">
+      <div className="d-flex flex-nowrap gap-2 align-items-center">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+
+          if (tab.isProminent) {
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                className={`btn btn-tab-kitchen text-nowrap rounded-3 fw-bold px-3 py-2 d-flex align-items-center gap-2 ${
+                  isActive ? 'active' : ''
+                }`}
+                style={{ fontSize: '14px' }}
+                onClick={() => onTabChange(tab.id)}
+              >
+                <i className={`${tab.icon} fs-6`}></i>
+                <span>{tab.label}</span>
+                {ordersCount > 0 && (
+                  <span className="badge bg-white text-danger fw-bold rounded-pill kitchen-badge-pulse px-2 py-1" style={{ fontSize: '11px' }}>
+                    {ordersCount}
+                  </span>
+                )}
+              </button>
+            );
+          }
+
+          return (
             <button
-              className={`nav-link d-flex align-items-center gap-2 text-nowrap rounded-3 fw-bold px-3 py-2 ${
-                activeTab === tab.id ? 'active bg-success text-white shadow-sm' : 'bg-white text-secondary border'
+              key={tab.id}
+              type="button"
+              className={`btn text-nowrap rounded-3 fw-bold px-3 py-2 d-flex align-items-center gap-2 transition-all ${
+                isActive 
+                  ? 'bg-success text-white shadow-sm' 
+                  : 'bg-white text-secondary border border-1 hover-shadow'
               }`}
               style={{ fontSize: '13.5px' }}
               onClick={() => onTabChange(tab.id)}
             >
-              <i className={tab.icon}></i>
+              <i className={`${tab.icon} ${isActive ? 'text-white' : 'text-success'}`}></i>
               <span>{tab.label}</span>
             </button>
-          </li>
-        ))}
-      </ul>
+          );
+        })}
+      </div>
     </div>
   );
 }

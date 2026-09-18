@@ -20,14 +20,17 @@ router.post('/menu', menuController.saveMenu);
 router.patch('/menu/status', menuController.toggleStatus);
 router.delete('/menu/:rowIndex', menuController.deleteMenu);
 
-// Round Management
+// Round & Schedule Management
 router.post('/round', roundController.updateRound);
+router.post('/schedule', adminController.updateSchedule);
 
 // Orders Management
 router.patch('/orders/:rowIndex', orderController.updateStatus);
 
 // Admins Management
 router.post('/admins', adminController.addAdmin);
+router.patch('/admins/status', adminController.toggleAdminStatus);
+router.put('/admins/:rowIndex', adminController.editAdmin);
 router.delete('/admins/:rowIndex', adminController.deleteAdmin);
 
 module.exports = router;

@@ -50,8 +50,16 @@ export async function callDirectGas(endpoint, options = {}) {
     payload.rowIndex = parseInt(parts[parts.length - 1], 10);
   } else if (path === '/admin/round' && options.method === 'POST') {
     action = 'updateRound';
+  } else if (path === '/admin/schedule' && options.method === 'POST') {
+    action = 'updateSchedule';
   } else if (path.startsWith('/admin/orders/') && options.method === 'PATCH') {
     action = 'updateOrderStatus';
+    const parts = path.split('/');
+    payload.rowIndex = parseInt(parts[parts.length - 1], 10);
+  } else if (path === '/admin/admins/status' && options.method === 'PATCH') {
+    action = 'toggleAdminStatus';
+  } else if (path.startsWith('/admin/admins/') && options.method === 'PUT') {
+    action = 'editAdmin';
     const parts = path.split('/');
     payload.rowIndex = parseInt(parts[parts.length - 1], 10);
   } else if (path === '/admin/admins' && options.method === 'POST') {

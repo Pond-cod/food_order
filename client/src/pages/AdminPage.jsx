@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Swal from 'sweetalert2';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -6,26 +6,58 @@ import {
   saveMenu,
   toggleMenuStatus,
   deleteMenu,
-  updateRound,
+  saveSchedule,
   updateOrderStatus,
   addAdmin,
+  editAdmin,
+  toggleAdminStatus,
   deleteAdmin,
 } from '../services/adminService';
 import AdminTabs from '../components/admin/AdminTabs';
+import ScheduleSettings from '../components/admin/ScheduleSettings';
 import MenuTable from '../components/admin/MenuTable';
 import MenuModal from '../components/admin/MenuModal';
-import RoundSettings from '../components/admin/RoundSettings';
-import KitchenSummary from '../components/admin/KitchenSummary';
-import OrdersTable from '../components/admin/OrdersTable';
-import CustomerModal from '../components/admin/CustomerModal';
+import KitchenOrdersView from '../components/admin/KitchenOrdersView';
 import AdminTable from '../components/admin/AdminTable';
+import CustomerModal from '../components/admin/CustomerModal';
 import AccessDenied from '../components/admin/AccessDenied';
 import Loading from '../components/common/Loading';
 import ImageModal from '../components/common/ImageModal';
 
+const VALID_TABS = ['schedule', 'menus', 'kitchen', 'admins'];
+
 export default function AdminPage({ onNavigateOrder }) {
   const { user, isAdmin, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState('menu');
+
+  // จัดการ Tab ผ่าน URL Hash (เช่น #admin/schedule, #admin/menus, #admin/kitchen, #admin/admins)
+  const getTabFromHash = () => {
+    try {
+      const hash = window.location.hash || '';
+      const match = hash.replace('#', '').replace('admin/', '');
+      if (VALID_TABS.includes(match)) {
+        return match;
+      }
+    } catch (e) {}
+    return 'schedule';
+  };
+
+  const [activeTab, setActiveTab] = useState(getTabFromHash);
+
+  // Sync กับ hash change event
+  useEffect(() => {
+    const handleHashChange = () => {
+      const tab = getTabFromHash();
+      setActiveTab(tab);
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    window.location.hash = `admin/${tab}`;
+  };
+
   const [dashboardData, setDashboardData] = useState(() => {
     try {
       const cached = localStorage.getItem('cached_admin_dashboard');
@@ -34,6 +66,7 @@ export default function AdminPage({ onNavigateOrder }) {
       return null;
     }
   });
+
   const [isLoading, setIsLoading] = useState(() => {
     try {
       return !localStorage.getItem('cached_admin_dashboard');
@@ -49,19 +82,8 @@ export default function AdminPage({ onNavigateOrder }) {
   const [activeCustomerOrder, setActiveCustomerOrder] = useState(null);
   const [zoomImage, setZoomImage] = useState(null);
 
-  useEffect(() => {
-    if (!authLoading) {
-      if (isAdmin) {
-        loadDashboard();
-      } else {
-        setIsLoading(false);
-      }
-    }
-  }, [isAdmin, authLoading]);
-
-  async function loadDashboard() {
+  const loadDashboard = useCallback(async () => {
     try {
-      // ถ้าไม่มีแคช ให้แสดงหน้าโหลด แต่ถ้ามีแคชแล้ว ให้โหลดเงียบๆ ในพื้นหลัง
       if (!dashboardData) setIsLoading(true);
       const res = await getAdminDashboard();
       if (res.status === 'success') {
@@ -74,23 +96,78 @@ export default function AdminPage({ onNavigateOrder }) {
       Swal.fire({
         icon: 'error',
         title: 'เชื่อมต่อล้มเหลว',
-        text: err.message.includes('404') 
-          ? 'URL ของ Google Apps Script Web App เปลี่ยนไป (HTTP 404) กรุณาคัดลอก Web App URL ใหม่จากหน้า Deploy มาใส่ในระบบ' 
-          : err.message
+        text: err.message.includes('404')
+          ? 'URL ของ Google Apps Script Web App เปลี่ยนไป (HTTP 404) กรุณาคัดลอก Web App URL ใหม่จากหน้า Deploy มาใส่ในระบบ'
+          : err.message,
       });
     } finally {
       setIsLoading(false);
     }
+  }, [dashboardData]);
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (isAdmin) {
+        loadDashboard();
+      } else {
+        setIsLoading(false);
+      }
+    }
+  }, [isAdmin, authLoading, loadDashboard]);
+
+  // ========================================================
+  // 1. Feature: กำหนดหน้าสั่งอาหาร (Schedule & Daily Menus)
+  // ========================================================
+  async function handleSaveSchedule({ roundTitle, selectedDate, menuStatusMap }) {
+    // Optimistic UI update ทันที
+    setDashboardData((prev) => {
+      if (!prev) return prev;
+      const updatedMenus = (prev.menus || []).map((m) => {
+        const isChecked = !!menuStatusMap[m.rowIndex];
+        return { ...m, status: isChecked ? 'Available' : 'Sold Out' };
+      });
+      return {
+        ...prev,
+        currentRound: roundTitle,
+        menus: updatedMenus,
+      };
+    });
+
+    try {
+      setIsSaving(true);
+      await saveSchedule({ roundTitle, selectedDate, menuStatusMap });
+      Swal.fire({
+        icon: 'success',
+        title: 'บันทึกสำเร็จ',
+        text: `ตั้งค่ารอบ "${roundTitle}" และเมนูเปิดขายเรียบร้อยแล้ว`,
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      await loadDashboard();
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
+      await loadDashboard();
+    } finally {
+      setIsSaving(false);
+    }
   }
 
-  // --- Menu Handlers ---
+  // ========================================================
+  // 2. Feature: จัดการเมนูทั้งหมด (Master Menu Catalog)
+  // ========================================================
   async function handleSaveMenu(menuData) {
     try {
       setIsSaving(true);
       await saveMenu(menuData);
       setIsMenuModalOpen(false);
       setEditingMenu(null);
-      Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'บันทึกเมนูเรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
+      Swal.fire({
+        icon: 'success',
+        title: 'สำเร็จ',
+        text: 'บันทึกเมนูเรียบร้อยแล้ว',
+        timer: 1500,
+        showConfirmButton: false,
+      });
       await loadDashboard();
     } catch (err) {
       Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
@@ -99,22 +176,26 @@ export default function AdminPage({ onNavigateOrder }) {
     }
   }
 
-  async function handleToggleStatus(rowIndex, newStatus) {
-    // ตอบสนอง UI ทันทีใน 0.01 วินาที (Optimistic UI)
+  async function handleToggleMenuStatus(rowIndex, newStatus) {
+    // Optimistic UI
     setDashboardData((prev) => {
       if (!prev) return prev;
-      const updated = prev.menus.map((m) => (m.rowIndex === rowIndex ? { ...m, status: newStatus } : m));
+      const updated = prev.menus.map((m) =>
+        m.rowIndex === rowIndex ? { ...m, status: newStatus } : m
+      );
       return { ...prev, menus: updated };
     });
 
     try {
       await toggleMenuStatus(rowIndex, newStatus);
     } catch (err) {
-      // คืนค่าเดิมหากบันทึกล้มเหลว
+      // Revert if error
       setDashboardData((prev) => {
         if (!prev) return prev;
         const oldStatus = newStatus === 'Available' ? 'Sold Out' : 'Available';
-        const reverted = prev.menus.map((m) => (m.rowIndex === rowIndex ? { ...m, status: oldStatus } : m));
+        const reverted = prev.menus.map((m) =>
+          m.rowIndex === rowIndex ? { ...m, status: oldStatus } : m
+        );
         return { ...prev, menus: reverted };
       });
       Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
@@ -136,35 +217,28 @@ export default function AdminPage({ onNavigateOrder }) {
 
     try {
       await deleteMenu(rowIndex);
-      Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'ลบเมนูเรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
+      Swal.fire({
+        icon: 'success',
+        title: 'สำเร็จ',
+        text: 'ลบเมนูเรียบร้อยแล้ว',
+        timer: 1500,
+        showConfirmButton: false,
+      });
       await loadDashboard();
     } catch (err) {
       Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
     }
   }
 
-  // --- Round Handlers ---
-  async function handleSaveRound(newRound) {
-    // ปรับรอบใน UI ทันที (Optimistic UI)
-    setDashboardData((prev) => (prev ? { ...prev, currentRound: newRound } : prev));
-
-    try {
-      setIsSaving(true);
-      await updateRound(newRound);
-      Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'อัปเดตรอบเรียบร้อยแล้ว', timer: 1200, showConfirmButton: false });
-    } catch (err) {
-      Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  // --- Order Handlers ---
+  // ========================================================
+  // 3. Feature: ออเดอร์ & ครัว (Kitchen & Orders)
+  // ========================================================
   async function handleUpdateOrderStatus(rowIndex, newStatus) {
-    // ปรับสถานะใน UI ทันที (Optimistic UI)
     setDashboardData((prev) => {
       if (!prev) return prev;
-      const updated = prev.orders.map((o) => (o.rowIndex === rowIndex ? { ...o, status: newStatus } : o));
+      const updated = prev.orders.map((o) =>
+        o.rowIndex === rowIndex ? { ...o, status: newStatus } : o
+      );
       return { ...prev, orders: updated };
     });
 
@@ -172,15 +246,24 @@ export default function AdminPage({ onNavigateOrder }) {
       await updateOrderStatus(rowIndex, newStatus);
     } catch (err) {
       Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
+      await loadDashboard();
     }
   }
 
-  // --- Admin Handlers ---
+  // ========================================================
+  // 4. Feature: ผู้ดูแลระบบ (Admin Access Control)
+  // ========================================================
   async function handleAddAdmin(newUserId, newName, role) {
     try {
       setIsSaving(true);
       await addAdmin(newUserId, newName, role);
-      Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'เพิ่มผู้ดูแลเรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
+      Swal.fire({
+        icon: 'success',
+        title: 'สำเร็จ',
+        text: 'เพิ่มผู้ดูแลเรียบร้อยแล้ว',
+        timer: 1500,
+        showConfirmButton: false,
+      });
       await loadDashboard();
     } catch (err) {
       Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
@@ -189,9 +272,47 @@ export default function AdminPage({ onNavigateOrder }) {
     }
   }
 
+  async function handleEditAdmin(rowIndex, userId, name, role) {
+    try {
+      setIsSaving(true);
+      await editAdmin(rowIndex, userId, name, role);
+      Swal.fire({
+        icon: 'success',
+        title: 'สำเร็จ',
+        text: 'แก้ไขข้อมูลผู้ดูแลเรียบร้อยแล้ว',
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      await loadDashboard();
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleToggleAdminStatus(rowIndex, newStatus) {
+    // Optimistic UI
+    setDashboardData((prev) => {
+      if (!prev) return prev;
+      const updatedAdmins = (prev.admins || []).map((a) =>
+        a.rowIndex === rowIndex ? { ...a, status: newStatus } : a
+      );
+      return { ...prev, admins: updatedAdmins };
+    });
+
+    try {
+      await toggleAdminStatus(rowIndex, newStatus);
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
+      await loadDashboard();
+    }
+  }
+
   async function handleDeleteAdmin(rowIndex, adminName) {
     const confirm = await Swal.fire({
       title: `ต้องการถอนสิทธิ์ "${adminName}"?`,
+      text: 'ผู้ใช้นี้จะไม่สามารถเข้าถึงระบบหลังบ้านได้อีกต่อไป',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'ถอนสิทธิ์',
@@ -203,7 +324,13 @@ export default function AdminPage({ onNavigateOrder }) {
 
     try {
       await deleteAdmin(rowIndex);
-      Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'ถอนสิทธิ์เรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
+      Swal.fire({
+        icon: 'success',
+        title: 'สำเร็จ',
+        text: 'ถอนสิทธิ์เรียบร้อยแล้ว',
+        timer: 1500,
+        showConfirmButton: false,
+      });
       await loadDashboard();
     } catch (err) {
       Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
@@ -222,16 +349,44 @@ export default function AdminPage({ onNavigateOrder }) {
     return <AccessDenied userId={user ? user.userId : ''} onNavigateOrder={onNavigateOrder} />;
   }
 
-  const { currentRound = '', menus = [], orders = [], admins = [] } = dashboardData || {};
+  const {
+    currentRound = '',
+    menus = [],
+    orders = [],
+    admins = [],
+    kitchenSummary = {},
+  } = dashboardData || {};
+
+  // คำนวณจำนวนออเดอร์ที่ยังไม่เสร็จ (Pending/Cooking) สำหรับ Badge แจ้งเตือนบน Tab
+  const activeOrdersCount = orders.filter((o) => {
+    const s = (o.status || '').toLowerCase();
+    return s === 'pending' || s === 'cooking' || s === 'รอดำเนินการ' || s === 'กำลังปรุง';
+  }).length;
 
   return (
     <div className="container-fluid container-xl py-3 py-md-4">
-      <AdminTabs activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab)} />
+      {/* 4 Dedicated Tabs Navigation with Kitchen Prominence */}
+      <AdminTabs
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        ordersCount={activeOrdersCount || orders.length}
+      />
 
-      {activeTab === 'menu' && (
+      {/* Feature 1: กำหนดหน้าสั่งอาหาร (Schedule & Daily Menus) */}
+      {activeTab === 'schedule' && (
+        <ScheduleSettings
+          currentRound={currentRound}
+          allMenus={menus}
+          onSaveSchedule={handleSaveSchedule}
+          isSaving={isSaving}
+        />
+      )}
+
+      {/* Feature 2: จัดการเมนูทั้งหมด (Master Menu Catalog) */}
+      {activeTab === 'menus' && (
         <MenuTable
           menus={menus}
-          onToggleStatus={handleToggleStatus}
+          onToggleStatus={handleToggleMenuStatus}
           onEditMenu={(menu) => {
             setEditingMenu(menu);
             setIsMenuModalOpen(true);
@@ -245,35 +400,34 @@ export default function AdminPage({ onNavigateOrder }) {
         />
       )}
 
-      {activeTab === 'round' && (
-        <RoundSettings
+      {/* Feature 3: ออเดอร์ & ครัว (Kitchen & Orders) - Most Prominent */}
+      {activeTab === 'kitchen' && (
+        <KitchenOrdersView
+          orders={orders}
+          menus={menus}
+          kitchenSummary={kitchenSummary}
           currentRound={currentRound}
-          onSaveRound={handleSaveRound}
-          isSaving={isSaving}
+          onUpdateStatus={handleUpdateOrderStatus}
+          onViewCustomer={(order) => setActiveCustomerOrder(order)}
+          onRefresh={loadDashboard}
+          isLoading={isLoading}
         />
       )}
 
-      {activeTab === 'orders' && (
-        <>
-          <KitchenSummary orders={orders} menus={menus} currentRound={currentRound} />
-          <OrdersTable
-            orders={orders}
-            onUpdateStatus={handleUpdateOrderStatus}
-            onOpenCustomerModal={(order) => setActiveCustomerOrder(order)}
-          />
-        </>
-      )}
-
+      {/* Feature 4: ผู้ดูแลระบบ (Admin Access Control) */}
       {activeTab === 'admins' && (
         <AdminTable
           admins={admins}
           onAddAdmin={handleAddAdmin}
+          onEditAdmin={handleEditAdmin}
+          onToggleAdminStatus={handleToggleAdminStatus}
           onDeleteAdmin={handleDeleteAdmin}
           isSaving={isSaving}
         />
       )}
 
-      {/* Modals */}
+      {/* --- Modals --- */}
+      {/* Menu Edit/Add Modal */}
       <MenuModal
         isOpen={isMenuModalOpen}
         onClose={() => {
@@ -285,11 +439,13 @@ export default function AdminPage({ onNavigateOrder }) {
         isSaving={isSaving}
       />
 
+      {/* Customer Full Details Modal */}
       <CustomerModal
         order={activeCustomerOrder}
         onClose={() => setActiveCustomerOrder(null)}
       />
 
+      {/* Image Preview Modal */}
       <ImageModal
         imageUrl={zoomImage ? zoomImage.url : null}
         title={zoomImage ? zoomImage.title : ''}

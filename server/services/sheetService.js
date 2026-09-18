@@ -280,6 +280,54 @@ async function deleteAdmin(rowIndex, adminUserId, adminDisplayName) {
   return await callGasApi(payload, 'POST');
 }
 
+/**
+ * กำหนดหน้าสั่งอาหาร (รอบ, วันที่, และสถานะเมนู)
+ */
+async function updateSchedule(roundTitle, selectedDate, menuStatusMap, adminUserId, adminDisplayName) {
+  clearCache();
+  const payload = {
+    action: 'updateSchedule',
+    roundTitle,
+    selectedDate,
+    menuStatusMap,
+    adminUserId,
+    adminDisplayName,
+  };
+  return await callGasApi(payload, 'POST');
+}
+
+/**
+ * สลับสถานะเปิด/ปิดใช้งานสิทธิ์ Admin
+ */
+async function toggleAdminStatus(rowIndex, newStatus, adminUserId, adminDisplayName) {
+  clearCache();
+  const payload = {
+    action: 'toggleAdminStatus',
+    rowIndex,
+    newStatus,
+    adminUserId,
+    adminDisplayName,
+  };
+  return await callGasApi(payload, 'POST');
+}
+
+/**
+ * แก้ไขข้อมูลผู้ดูแลระบบ
+ */
+async function editAdmin(rowIndex, userId, name, role, adminUserId, adminDisplayName) {
+  clearCache();
+  const payload = {
+    action: 'editAdmin',
+    rowIndex,
+    userId,
+    name,
+    role,
+    adminUserId,
+    adminDisplayName,
+  };
+  return await callGasApi(payload, 'POST');
+}
+
 module.exports = {
   getAppData,
   checkAdmin,
@@ -292,4 +340,7 @@ module.exports = {
   updateOrderStatus,
   addAdmin,
   deleteAdmin,
+  updateSchedule,
+  toggleAdminStatus,
+  editAdmin,
 };

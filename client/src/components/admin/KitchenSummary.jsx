@@ -1,26 +1,33 @@
 import React from 'react';
 import { formatCurrency } from '../../utils/formatters';
 
-export default function KitchenSummary({ orders, menus, currentRound }) {
+export default function KitchenSummary({ orders = [], menus = [], currentRound = '', summary = {} }) {
   // คำนวณสรุป
-  let totalBoxes = 0;
-  let totalRev = 0;
-  const kitchenCount = {};
+  let computedBoxes = 0;
+  let computedRev = 0;
+  const computedKitchenCount = {};
 
   (orders || []).forEach((o) => {
     if (o.status !== 'Cancelled') {
       const qty = Number(o.quantity) || 1;
-      totalBoxes += qty;
+      computedBoxes += qty;
 
       const m = (menus || []).find((item) => item.name === o.menuName);
       const price = m ? m.price : 0;
-      totalRev += price * qty;
+      computedRev += price * qty;
 
       if (o.round === currentRound) {
-        kitchenCount[o.menuName] = (kitchenCount[o.menuName] || 0) + qty;
+        computedKitchenCount[o.menuName] = (computedKitchenCount[o.menuName] || 0) + qty;
       }
     }
   });
+
+  const totalBoxes = summary && summary.totalBoxes !== undefined ? summary.totalBoxes : computedBoxes;
+  const totalRev = summary && summary.totalRevenue !== undefined ? summary.totalRevenue : computedRev;
+  const totalOrdersCount = summary && summary.totalOrders !== undefined ? summary.totalOrders : orders.length;
+  const kitchenCount = (summary && summary.kitchenSummary && Object.keys(summary.kitchenSummary).length > 0)
+    ? summary.kitchenSummary
+    : computedKitchenCount;
 
   const kitchenMenuKeys = Object.keys(kitchenCount);
 
@@ -34,7 +41,7 @@ export default function KitchenSummary({ orders, menus, currentRound }) {
               <i className="fa-solid fa-receipt"></i>
             </div>
             <div>
-              <div className="fs-4 fw-bold text-dark lh-1">{(orders || []).length}</div>
+              <div className="fs-4 fw-bold text-dark lh-1">{totalOrdersCount}</div>
               <small className="text-muted">รายการสั่งทั้งหมด</small>
             </div>
           </div>

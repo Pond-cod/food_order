@@ -247,3 +247,37 @@ body {
   border-color: var(--line-primary);
   color: var(--line-dark);
 }
+
+/* Prominent Kitchen Button */
+.btn-tab-kitchen {
+  background: linear-gradient(135deg, #FF6B35, #E8590C) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 14px rgba(255, 107, 53, 0.35);
+  border: none !important;
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-tab-kitchen:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 18px rgba(255, 107, 53, 0.5);
+  color: #FFFFFF !important;
+}
+
+.btn-tab-kitchen.active {
+  background: linear-gradient(135deg, #D9480F, #C92A2A) !important;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.3), 0 6px 20px rgba(217, 72, 15, 0.4) !important;
+}
+
+.kitchen-badge-pulse {
+  animation: kitchenPulse 1.8s infinite;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes kitchenPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}

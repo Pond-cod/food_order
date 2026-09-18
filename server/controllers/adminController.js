@@ -74,9 +74,61 @@ async function deleteAdmin(req, res, next) {
   }
 }
 
+/**
+ * POST /api/admin/schedule
+ * กำหนดหน้าสั่งอาหาร (รอบ, วันที่, และเมนูเปิดขาย)
+ */
+async function updateSchedule(req, res, next) {
+  try {
+    const { roundTitle, selectedDate, menuStatusMap } = req.body;
+    const { userId, displayName } = req.adminUser;
+
+    const result = await sheetService.updateSchedule(roundTitle, selectedDate, menuStatusMap, userId, displayName);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PATCH /api/admin/admins/status
+ * สลับสถานะเปิด/ปิดใช้งานสิทธิ์ Admin
+ */
+async function toggleAdminStatus(req, res, next) {
+  try {
+    const { rowIndex, newStatus } = req.body;
+    const { userId, displayName } = req.adminUser;
+
+    const result = await sheetService.toggleAdminStatus(rowIndex, newStatus, userId, displayName);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PUT /api/admin/admins/:rowIndex
+ * แก้ไขข้อมูล Admin
+ */
+async function editAdmin(req, res, next) {
+  try {
+    const rowIndex = parseInt(req.params.rowIndex, 10);
+    const { userId: targetUserId, name, role } = req.body;
+    const { userId, displayName } = req.adminUser;
+
+    const result = await sheetService.editAdmin(rowIndex, targetUserId, name, role, userId, displayName);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   checkAdmin,
   getDashboard,
   addAdmin,
   deleteAdmin,
+  updateSchedule,
+  toggleAdminStatus,
+  editAdmin,
 };
