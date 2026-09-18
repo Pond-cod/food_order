@@ -16,14 +16,29 @@ import Loading from '../components/common/Loading';
 
 export default function OrderPage() {
   const { user } = useAuth();
-  const [menus, setMenus] = useState([]);
-  const [currentRound, setCurrentRound] = useState('');
+  const [menus, setMenus] = useState(() => {
+    try {
+      const cached = localStorage.getItem('liff_food_order_cache');
+      return cached ? JSON.parse(cached).menus || [] : [];
+    } catch (e) { return []; }
+  });
+  const [currentRound, setCurrentRound] = useState(() => {
+    try {
+      const cached = localStorage.getItem('liff_food_order_cache');
+      return cached ? JSON.parse(cached).round || '' : '';
+    } catch (e) { return ''; }
+  });
   const [selectedMenu, setSelectedMenu] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [phone, setPhone] = useState('');
   const [department, setDepartment] = useState('');
   const [note, setNote] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    try {
+      const cached = localStorage.getItem('liff_food_order_cache');
+      return !(cached && JSON.parse(cached).menus?.length > 0);
+    } catch (e) { return true; }
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -40,17 +55,6 @@ export default function OrderPage() {
 
   async function loadData() {
     try {
-      // โหลดจากแคชก่อนเพื่อให้แสดงผลได้ทันที
-      const cached = localStorage.getItem('liff_food_order_cache');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.menus && parsed.menus.length > 0) {
-          setMenus(parsed.menus);
-          setCurrentRound(parsed.round || '');
-          setIsLoading(false);
-        }
-      }
-
       // ดึงข้อมูลอัปเดตล่าสุดจาก Backend API
       const res = await getAvailableMenus();
       if (res.status === 'success') {

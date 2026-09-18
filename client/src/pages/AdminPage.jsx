@@ -100,15 +100,23 @@ export default function AdminPage({ onNavigateOrder }) {
   }
 
   async function handleToggleStatus(rowIndex, newStatus) {
+    // ตอบสนอง UI ทันทีใน 0.01 วินาที (Optimistic UI)
+    setDashboardData((prev) => {
+      if (!prev) return prev;
+      const updated = prev.menus.map((m) => (m.rowIndex === rowIndex ? { ...m, status: newStatus } : m));
+      return { ...prev, menus: updated };
+    });
+
     try {
       await toggleMenuStatus(rowIndex, newStatus);
-      // Update local state for immediate feedback
+    } catch (err) {
+      // คืนค่าเดิมหากบันทึกล้มเหลว
       setDashboardData((prev) => {
         if (!prev) return prev;
-        const updated = prev.menus.map((m) => (m.rowIndex === rowIndex ? { ...m, status: newStatus } : m));
-        return { ...prev, menus: updated };
+        const oldStatus = newStatus === 'Available' ? 'Sold Out' : 'Available';
+        const reverted = prev.menus.map((m) => (m.rowIndex === rowIndex ? { ...m, status: oldStatus } : m));
+        return { ...prev, menus: reverted };
       });
-    } catch (err) {
       Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
     }
   }
@@ -137,11 +145,13 @@ export default function AdminPage({ onNavigateOrder }) {
 
   // --- Round Handlers ---
   async function handleSaveRound(newRound) {
+    // ปรับรอบใน UI ทันที (Optimistic UI)
+    setDashboardData((prev) => (prev ? { ...prev, currentRound: newRound } : prev));
+
     try {
       setIsSaving(true);
       await updateRound(newRound);
-      Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'อัปเดตรอบเรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
-      await loadDashboard();
+      Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'อัปเดตรอบเรียบร้อยแล้ว', timer: 1200, showConfirmButton: false });
     } catch (err) {
       Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
     } finally {
@@ -151,13 +161,15 @@ export default function AdminPage({ onNavigateOrder }) {
 
   // --- Order Handlers ---
   async function handleUpdateOrderStatus(rowIndex, newStatus) {
+    // ปรับสถานะใน UI ทันที (Optimistic UI)
+    setDashboardData((prev) => {
+      if (!prev) return prev;
+      const updated = prev.orders.map((o) => (o.rowIndex === rowIndex ? { ...o, status: newStatus } : o));
+      return { ...prev, orders: updated };
+    });
+
     try {
       await updateOrderStatus(rowIndex, newStatus);
-      setDashboardData((prev) => {
-        if (!prev) return prev;
-        const updated = prev.orders.map((o) => (o.rowIndex === rowIndex ? { ...o, status: newStatus } : o));
-        return { ...prev, orders: updated };
-      });
     } catch (err) {
       Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
     }

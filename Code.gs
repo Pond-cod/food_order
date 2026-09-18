@@ -144,7 +144,9 @@ function doGet(e) {
       const orderSheet = ss.getSheetByName("Orders");
       if (orderSheet) {
         const oData = orderSheet.getDataRange().getValues();
-        // วนจากแถวล่าสุดขึ้นมา (แสดงรายการใหม่สุดก่อน)
+        // สรุปยอดครัวรอบปัจจุบัน และดึงเฉพาะ 100 รายการล่าสุดเพื่อความรวดเร็วสูงสุด
+        const maxOrders = 100;
+        const startRow = Math.max(1, oData.length - maxOrders);
         for (let i = oData.length - 1; i >= 1; i--) {
           const row = oData[i];
           const oRound = String(row[1] || "").trim();
@@ -152,34 +154,36 @@ function doGet(e) {
           const oQty = parseInt(row[5], 10) || 1;
           const oStatus = String(row[7] || "Pending").trim();
 
-          let rawTs = row[0];
-          let formattedTs = "";
-          if (rawTs instanceof Date) {
-            formattedTs = Utilities.formatDate(rawTs, "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
-          } else {
-            formattedTs = String(rawTs || "");
-          }
-
-          const orderItem = {
-            rowIndex: i + 1,
-            timestamp: formattedTs,
-            round: oRound,
-            userId: String(row[2] || ""),
-            displayName: String(row[3] || "ไม่ระบุชื่อ"),
-            menuName: oMenu,
-            quantity: oQty,
-            note: String(row[6] || "-"),
-            status: oStatus,
-            pictureUrl: String(row[8] || ""),
-            phone: String(row[9] || "-"),
-            department: String(row[10] || "-"),
-            statusMessage: String(row[11] || "-")
-          };
-          orders.push(orderItem);
-
           // สรุปยอดครัว (เฉพาะรอบปัจจุบัน และไม่ยกเลิก)
           if (oRound === currentRound && oStatus !== "Cancelled") {
             kitchenSummary[oMenu] = (kitchenSummary[oMenu] || 0) + oQty;
+          }
+
+          // เก็บเฉพาะ 100 รายการล่าสุดเพื่อส่งกลับหน้าเว็บ
+          if (i >= startRow) {
+            let rawTs = row[0];
+            let formattedTs = "";
+            if (rawTs instanceof Date) {
+              formattedTs = Utilities.formatDate(rawTs, "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
+            } else {
+              formattedTs = String(rawTs || "");
+            }
+
+            orders.push({
+              rowIndex: i + 1,
+              timestamp: formattedTs,
+              round: oRound,
+              userId: String(row[2] || ""),
+              displayName: String(row[3] || "ไม่ระบุชื่อ"),
+              menuName: oMenu,
+              quantity: oQty,
+              note: String(row[6] || "-"),
+              status: oStatus,
+              pictureUrl: String(row[8] || ""),
+              phone: String(row[9] || "-"),
+              department: String(row[10] || "-"),
+              statusMessage: String(row[11] || "-")
+            });
           }
         }
       }
@@ -216,8 +220,15 @@ function doGet(e) {
     }
 
     // -------------------------------------------------------------
-    // Action: getAppData (ค่าเริ่มต้นสำหรับหน้าลูกค้าสั่งอาหาร)
+    // Action: getAppData (ค่าเริ่มต้นสำหรับหน้าลูกค้าสั่งอาหาร - รองรับ CacheService ความเร็วสูง)
     // -------------------------------------------------------------
+    const scriptCache = CacheService.getScriptCache();
+    const cachedAppData = scriptCache.get("appData_fast_cache");
+    if (cachedAppData) {
+      return ContentService.createTextOutput(cachedAppData)
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     let currentRound = "รอบปกติ";
     const settingsSheet = ss.getSheetByName("Settings");
     if (settingsSheet) {
@@ -256,12 +267,19 @@ function doGet(e) {
       }
     }
 
-    return jsonResponse({
+    const appDataResult = {
       status: "success",
       round: currentRound,
       menus: availableMenus,
       timestamp: new Date().toISOString()
-    });
+    };
+
+    // แคชข้อมูลไว้ใน Google RAM 180 วินาที เพื่อตอบสนองทันทีใน ~200ms
+    try {
+      scriptCache.put("appData_fast_cache", JSON.stringify(appDataResult), 180);
+    } catch (cErr) {}
+
+    return jsonResponse(appDataResult);
 
   } catch (error) {
     return jsonResponse({
@@ -289,6 +307,11 @@ function doPost(e) {
     }
 
     const action = payload.action || "order"; // ถ้าไม่ระบุ action ถือเป็นการสั่งอาหารของลูกค้า
+
+    // เคลียร์ Cache ทันทีเมื่อมีคำสั่งเขียน/แก้ไขข้อมูล เพื่อให้ลูกค้าเห็นข้อมูลล่าสุด
+    try {
+      CacheService.getScriptCache().remove("appData_fast_cache");
+    } catch (cacheErr) {}
 
     // -------------------------------------------------------------
     // Action: order (ลูกค้าสั่งอาหาร)

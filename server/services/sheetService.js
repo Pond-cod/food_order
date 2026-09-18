@@ -1,6 +1,29 @@
 const { SPREADSHEET_ID, GAS_API_URL, getSheetsClient } = require('../config/googleSheets');
 const { uploadImageToDrive } = require('./driveService');
 
+// ==========================================
+// In-Memory Fast Cache (TTL)
+// ==========================================
+const memoryCache = new Map();
+
+function getCache(key) {
+  const item = memoryCache.get(key);
+  if (!item) return null;
+  if (Date.now() > item.expiry) {
+    memoryCache.delete(key);
+    return null;
+  }
+  return item.data;
+}
+
+function setCache(key, data, ttlMs = 60000) {
+  memoryCache.set(key, { data, expiry: Date.now() + ttlMs });
+}
+
+function clearCache() {
+  memoryCache.clear();
+}
+
 /**
  * เรียก API ผ่าน Google Apps Script Connector (Fallback / Direct Connector)
  */
@@ -24,8 +47,12 @@ async function callGasApi(payload, method = 'POST', queryParams = '') {
 
 /**
  * ดึงข้อมูลหน้าสั่งอาหารสำหรับลูกค้า (รอบปัจจุบัน + เมนูพร้อมขาย)
+ * พร้อมระบบ Cache 60 วินาที เพื่อความเร็วระดับมิลลิวินาที
  */
 async function getAppData() {
+  const cached = getCache('appData');
+  if (cached) return cached;
+
   const sheets = getSheetsClient();
 
   if (sheets) {
@@ -70,39 +97,63 @@ async function getAppData() {
         }
       }
 
-      return {
+      const result = {
         status: 'success',
         round: currentRound,
         menus,
         timestamp: new Date().toISOString(),
       };
+
+      setCache('appData', result, 60000);
+      return result;
     } catch (err) {
       console.warn("Direct Sheets API read failed, falling back to GAS connector:", err.message);
     }
   }
 
   // Fallback ผ่าน GAS Connector
-  return await callGasApi(null, 'GET', 'action=getAppData');
+  const data = await callGasApi(null, 'GET', 'action=getAppData');
+  if (data && data.status === 'success') {
+    setCache('appData', data, 60000);
+  }
+  return data;
 }
 
 /**
  * ตรวจสอบสิทธิ์ผู้ดูแลระบบ
  */
 async function checkAdmin(userId, displayName) {
-  return await callGasApi(null, 'GET', `action=checkAdmin&userId=${encodeURIComponent(userId)}&displayName=${encodeURIComponent(displayName || '')}`);
+  const cacheKey = `admin_check_${userId}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+
+  const result = await callGasApi(null, 'GET', `action=checkAdmin&userId=${encodeURIComponent(userId)}&displayName=${encodeURIComponent(displayName || '')}`);
+  if (result && result.status === 'success') {
+    setCache(cacheKey, result, 300000); // แคชสิทธิ์ Admin 5 นาที
+  }
+  return result;
 }
 
 /**
  * ดึงข้อมูลสำหรับหน้าจอ Admin ทั้งหมด
  */
 async function getAdminDashboard(userId, displayName) {
-  return await callGasApi(null, 'GET', `action=getAdminDashboard&userId=${encodeURIComponent(userId)}&displayName=${encodeURIComponent(displayName || '')}`);
+  const cacheKey = `dashboard_${userId}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+
+  const result = await callGasApi(null, 'GET', `action=getAdminDashboard&userId=${encodeURIComponent(userId)}&displayName=${encodeURIComponent(displayName || '')}`);
+  if (result && result.status === 'success') {
+    setCache(cacheKey, result, 30000); // แคชแดชบอร์ด 30 วินาที
+  }
+  return result;
 }
 
 /**
  * ลูกค้าบันทึกออเดอร์
  */
 async function createOrder(orderData) {
+  clearCache();
   const payload = {
     action: 'order',
     ...orderData,
@@ -114,6 +165,7 @@ async function createOrder(orderData) {
  * อัปเดตรอบการสั่งอาหาร (Admin)
  */
 async function updateRound(newRound, adminUserId, adminDisplayName) {
+  clearCache();
   const payload = {
     action: 'updateRound',
     newRound,
@@ -127,6 +179,7 @@ async function updateRound(newRound, adminUserId, adminDisplayName) {
  * บันทึกหรือเพิ่มเมนูอาหาร (Admin)
  */
 async function saveMenu(menuData, adminUserId, adminDisplayName) {
+  clearCache();
   let { name, price, status, imageUrl, imageBase64, rowIndex } = menuData;
 
   // หากมีภาพ Base64 ให้อัปโหลดเข้า Google Drive ก่อน
@@ -157,6 +210,7 @@ async function saveMenu(menuData, adminUserId, adminDisplayName) {
  * สลับสถานะเปิดขาย/ปิดขาย (Admin)
  */
 async function toggleMenuStatus(rowIndex, newStatus, adminUserId, adminDisplayName) {
+  clearCache();
   const payload = {
     action: 'toggleMenuStatus',
     rowIndex,
@@ -171,6 +225,7 @@ async function toggleMenuStatus(rowIndex, newStatus, adminUserId, adminDisplayNa
  * ลบเมนูอาหาร (Admin)
  */
 async function deleteMenu(rowIndex, adminUserId, adminDisplayName) {
+  clearCache();
   const payload = {
     action: 'deleteMenu',
     rowIndex,
@@ -184,6 +239,7 @@ async function deleteMenu(rowIndex, adminUserId, adminDisplayName) {
  * อัปเดตสถานะออเดอร์ (Admin)
  */
 async function updateOrderStatus(rowIndex, newStatus, adminUserId, adminDisplayName) {
+  clearCache();
   const payload = {
     action: 'updateOrderStatus',
     rowIndex,
@@ -198,6 +254,7 @@ async function updateOrderStatus(rowIndex, newStatus, adminUserId, adminDisplayN
  * เพิ่มผู้ดูแลระบบใหม่ (Admin)
  */
 async function addAdmin(newAdminUserId, newAdminName, role, adminUserId, adminDisplayName) {
+  clearCache();
   const payload = {
     action: 'addAdmin',
     newAdminUserId,
@@ -213,6 +270,7 @@ async function addAdmin(newAdminUserId, newAdminName, role, adminUserId, adminDi
  * ลบผู้ดูแลระบบ (Admin)
  */
 async function deleteAdmin(rowIndex, adminUserId, adminDisplayName) {
+  clearCache();
   const payload = {
     action: 'deleteAdmin',
     rowIndex,
