@@ -52,24 +52,24 @@ export default function Navbar({ currentPage, onNavigate }) {
           {currentPage === 'order' ? (
             <button 
               type="button" 
-              className="btn btn-sm btn-outline-success d-flex align-items-center gap-1 text-white border-success" 
-              style={{ fontSize: '12.5px' }}
+              className="btn btn-sm btn-outline-success text-white border-success d-flex align-items-center justify-content-center rounded-3 shadow-sm" 
+              style={{ width: '38px', height: '38px', fontSize: '15px' }}
               onClick={() => onNavigate('admin')}
               title="เข้าสู่ระบบจัดการผู้ดูแล"
+              aria-label="จัดการระบบ"
             >
               <i className="fa-solid fa-gear"></i>
-              <span>จัดการระบบ</span>
             </button>
           ) : (
             <button 
               type="button" 
-              className="btn btn-sm btn-outline-light d-flex align-items-center gap-1" 
-              style={{ fontSize: '12.5px' }}
+              className="btn btn-sm btn-outline-light d-flex align-items-center justify-content-center rounded-3 shadow-sm" 
+              style={{ width: '38px', height: '38px', fontSize: '15px' }}
               onClick={() => onNavigate('order')}
               title="กลับไปยังหน้าสั่งอาหาร"
+              aria-label="หน้าสั่งอาหาร"
             >
               <i className="fa-solid fa-bowl-food"></i>
-              <span>หน้าสั่งอาหาร</span>
             </button>
           )}
         </div>
