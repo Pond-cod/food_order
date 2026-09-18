@@ -46,12 +46,16 @@ app.use((req, res) => {
 // Centralized Error Handler
 app.use(errorHandler);
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(`🚀 Food Order Express API Server running on port ${PORT}`);
-  console.log(`📊 Google Sheets ID: ${process.env.SPREADSHEET_ID || "1J8l2VuxcboTZ3NSInfiKEvuBBbtzijvSHUkivbKb8yo"}`);
-  console.log(`📁 Google Drive Folder: ${process.env.GOOGLE_DRIVE_FOLDER_ID || "1YjjeCt3Vm2GzSIqpnxsHhhqhZeExj9oR"}`);
-  console.log(`🔗 Health Check: http://localhost:${PORT}/api/health`);
-  console.log(`====================================================`);
-});
+// Start Server (เฉพาะรันใน Local หรือ standalone server ไม่รันตอนเป็น Vercel serverless)
+if (require.main === module || !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(`🚀 Food Order Express API Server running on port ${PORT}`);
+    console.log(`📊 Google Sheets ID: ${process.env.SPREADSHEET_ID || "1J8l2VuxcboTZ3NSInfiKEvuBBbtzijvSHUkivbKb8yo"}`);
+    console.log(`📁 Google Drive Folder: ${process.env.GOOGLE_DRIVE_FOLDER_ID || "1YjjeCt3Vm2GzSIqpnxsHhhqhZeExj9oR"}`);
+    console.log(`🔗 Health Check: http://localhost:${PORT}/api/health`);
+    console.log(`====================================================`);
+  });
+}
+
+module.exports = app;
