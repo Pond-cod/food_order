@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
+import liff from '@line/liff';
 import { useAuth } from '../context/AuthContext';
 import { getAvailableMenus } from '../services/menuService';
 import { submitOrder } from '../services/orderService';
@@ -44,6 +45,7 @@ export default function OrderPage() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isContactSubmitted, setIsContactSubmitted] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -193,6 +195,18 @@ export default function OrderPage() {
       return;
     }
 
+    // ตรวจสอบข้อมูลติดต่อ (จำเป็นสำหรับการจัดส่ง)
+    if (!phone.trim() || !department.trim()) {
+      setIsContactSubmitted(true);
+      Swal.fire({
+        icon: 'warning',
+        title: 'กรุณากรอกข้อมูลติดต่อให้ครบถ้วน',
+        text: 'กรุณากรอกทั้งเบอร์โทรศัพท์และแผนก/โต๊ะจัดส่ง เพื่อให้ทางร้านจัดส่งได้ถูกต้องครับ',
+        confirmButtonColor: '#06C755',
+      });
+      return;
+    }
+
     // Pop-up ยืนยันการสั่งซื้อแบบแจกแจงรายการทั้งหมด
     const result = await Swal.fire({
       title: 'ยืนยันการสั่งซื้อ?',
@@ -204,13 +218,12 @@ export default function OrderPage() {
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
             <span style="color: #64748B;">เบอร์โทร:</span>
-            <span style="color: ${phone ? '#1E293B' : '#EF4444'}; font-weight: ${phone ? '500' : 'bold'};">${phone || 'ไม่ได้ระบุ'}</span>
+            <span style="color: #1E293B; font-weight: bold;">${phone}</span>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
             <span style="color: #64748B;">แผนก/โต๊ะ:</span>
-            <span style="color: ${department ? '#1E293B' : '#EF4444'}; font-weight: ${department ? '500' : 'bold'};">${department || 'ไม่ได้ระบุ'}</span>
+            <span style="color: #1E293B; font-weight: bold;">${department}</span>
           </div>
-          ${(!phone && !department) ? '<div style="color: #B45309; font-size: 11.5px; background: #FEF3C7; padding: 6px 10px; border-radius: 8px; margin-bottom: 6px;">💡 แนะนำ: กรอกเบอร์โทรหรือแผนก เพื่อให้จัดส่งได้ถูกต้อง</div>' : ''}
           <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
             <span style="color: #64748B;">หมายเหตุ:</span>
             <span style="color: #D97706;">${note || '-'}</span>
@@ -284,17 +297,38 @@ export default function OrderPage() {
         quantity: totalBoxes,
       });
 
+      const isInLineApp = typeof liff !== 'undefined' && typeof liff.isInClient === 'function' && liff.isInClient();
+
       await Swal.fire({
         icon: 'success',
         title: 'บันทึกออเดอร์สำเร็จ!',
-        html: `ระบบส่งรายการอาหาร <b>${cartItems.length} เมนู (${totalBoxes} กล่อง)</b> เข้าครัวเรียบร้อยแล้ว`,
-        timer: 2400,
-        showConfirmButton: false,
+        html: `
+          <div style="font-size: 14px; text-align: center;">
+            <p style="margin-bottom: 8px;">ระบบส่งรายการอาหาร <b>${cartItems.length} เมนู (${totalBoxes} กล่อง)</b> เข้าครัวเรียบร้อยแล้ว</p>
+            <div style="color: #64748B; font-size: 12px; background: #F1F5F9; padding: 8px 12px; border-radius: 8px;">
+              ${isInLineApp ? '⏳ หน้าต่างจะปิดอัตโนมัติใน 2.5 วินาที...' : '✅ ขอบคุณที่สั่งอาหาร สามารถปิดหน้านี้ได้เลยครับ'}
+            </div>
+          </div>
+        `,
+        timer: 2500,
+        showConfirmButton: !isInLineApp,
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#06C755',
       });
+
+      // ปิดหน้าต่าง LIFF อัตโนมัติหากเปิดผ่านแอป LINE
+      try {
+        if (isInLineApp) {
+          liff.closeWindow();
+        }
+      } catch (liffErr) {
+        console.warn("liff.closeWindow notice:", liffErr);
+      }
 
       // ล้างตะกร้าหลังจากสั่งเสร็จ
       setCart({});
       setNote('');
+      setIsContactSubmitted(false);
     } catch (err) {
       Swal.fire({
         icon: 'error',
@@ -507,6 +541,7 @@ export default function OrderPage() {
                 setPhone={setPhone}
                 department={department}
                 setDepartment={setDepartment}
+                isSubmitted={isContactSubmitted}
               />
 
               <QuickNoteChips
@@ -557,6 +592,7 @@ export default function OrderPage() {
                 setPhone={setPhone}
                 department={department}
                 setDepartment={setDepartment}
+                isSubmitted={isContactSubmitted}
               />
 
               {/* Quick Note Chips */}

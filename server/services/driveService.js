@@ -74,9 +74,8 @@ async function uploadImageToDrive(base64Data, fileName = 'menu_image.jpg') {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
-        action: 'saveMenu',
-        name: fileName,
-        price: 0,
+        action: 'uploadImage',
+        fileName,
         imageBase64: base64Data,
         adminUserId: 'SYSTEM_API',
         adminDisplayName: 'Server Service',
@@ -84,7 +83,7 @@ async function uploadImageToDrive(base64Data, fileName = 'menu_image.jpg') {
     });
 
     const result = await response.json();
-    if (result.imageUrl) {
+    if (result && result.imageUrl) {
       return result.imageUrl;
     }
   } catch (err) {

@@ -716,6 +716,21 @@ function doPost(e) {
       throw new Error("ไม่พบข้อมูลผู้ดูแลระบบ");
     }
 
+    // 11. อัปโหลดรูปภาพไปยัง Google Drive (uploadImage)
+    if (action === "uploadImage") {
+      const imageBase64 = payload.imageBase64 || "";
+      const fileName = payload.fileName || payload.menuName || "menu_image";
+      if (!imageBase64) {
+        throw new Error("กรุณาส่งข้อมูลรูปภาพ (imageBase64)");
+      }
+      const directImageUrl = uploadImageToDrive(imageBase64, fileName);
+      return jsonResponse({
+        status: "success",
+        message: "อัปโหลดรูปภาพสำเร็จ",
+        imageUrl: directImageUrl
+      });
+    }
+
     throw new Error("ไม่พบคำสั่ง (Unknown Action)");
 
   } catch (error) {

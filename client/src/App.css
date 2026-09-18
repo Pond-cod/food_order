@@ -660,6 +660,17 @@ body {
   box-shadow: 0 2px 6px rgba(6, 199, 85, 0.3);
 }
 
+/* Order Page Layout & Mobile Bottom Padding */
+.order-page-wrapper {
+  min-height: 100%;
+}
+
+@media (max-width: 991.98px) {
+  .order-page-wrapper {
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* Floating Sticky Bottom Bar for Mobile & LINE UX */
 .sticky-bottom-bar {
   position: fixed;

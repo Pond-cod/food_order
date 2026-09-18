@@ -55,8 +55,10 @@ export default function ScheduleSettings({
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    // แยกชื่อรอบและวันที่เดิมหากมี
-    setRoundName(currentRound || 'รอบเที่ยง');
+    // แยกชื่อรอบและวันที่เดิมหากมี ตัดวงเล็บวันที่เดิมออกเพื่อป้องกันการซ้ำซ้อน
+    const rawRound = currentRound || 'รอบเที่ยง';
+    const cleaned = rawRound.replace(/\s*\(\d+\s+[\u0E00-\u0E7Fa-zA-Z.]+\)\s*$/g, '').trim();
+    setRoundName(cleaned || rawRound);
 
     // ตรวจสอบเมนูที่ปัจจุบันเป็น Available ให้ถูกติ๊กเลือกเริ่มต้น
     const initialMap = {};
@@ -69,15 +71,16 @@ export default function ScheduleSettings({
   // คำนวณชื่อรอบที่สมบูรณ์
   const getFullRoundTitle = () => {
     if (!roundName.trim()) return '';
-    if (roundName.includes('ปิดรับออเดอร์')) return roundName;
+    if (roundName.includes('ปิดรับออเดอร์')) return roundName.trim();
+    const baseName = roundName.replace(/\s*\(\d+\s+[\u0E00-\u0E7Fa-zA-Z.]+\)\s*$/g, '').trim();
     if (autoCombine && selectedDate) {
       const parts = selectedDate.split('-');
       const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
       const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
       const shortDate = `${d.getDate()} ${thaiMonths[d.getMonth()]}`;
-      return `${roundName.trim()} (${shortDate})`;
+      return `${baseName} (${shortDate})`;
     }
-    return roundName.trim();
+    return baseName || roundName.trim();
   };
 
   // Toggle การเลือกเมนูเดี่ยว

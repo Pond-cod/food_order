@@ -1,6 +1,38 @@
 import React from 'react';
 import { formatCurrency } from '../../utils/formatters';
 
+function MenuThumbImage({ imageUrl, name, onZoomImage }) {
+  const [hasError, setHasError] = React.useState(false);
+
+  if (!imageUrl || hasError) {
+    return (
+      <div className="menu-thumb-wrapper" style={{ cursor: 'default' }}>
+        <div className="menu-thumb-placeholder">
+          <i className="fa-solid fa-bowl-food"></i>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="menu-thumb-wrapper" 
+      onClick={() => onZoomImage(imageUrl, name)}
+      title="คลิกเพื่อดูรูปภาพขนาดใหญ่"
+    >
+      <img
+        src={imageUrl}
+        alt={name}
+        className="menu-thumb-img"
+        onError={() => setHasError(true)}
+      />
+      <div className="menu-thumb-zoom">
+        <i className="fa-solid fa-magnifying-glass-plus"></i>
+      </div>
+    </div>
+  );
+}
+
 export default function MenuTable({ menus, onToggleStatus, onEditMenu, onDeleteMenu, onZoomImage, onOpenAddModal, role = 'Admin' }) {
   const isCook = (role || '').toLowerCase() === 'cook' || (role || '').toLowerCase() === 'kitchen';
   const canEditCatalog = !isCook;
@@ -59,31 +91,7 @@ export default function MenuTable({ menus, onToggleStatus, onEditMenu, onDeleteM
                   <tr key={menu.rowIndex || idx}>
                     <td className="text-muted">{idx + 1}</td>
                     <td className="text-center">
-                      {menu.imageUrl ? (
-                        <div 
-                          className="menu-thumb-wrapper" 
-                          onClick={() => onZoomImage(menu.imageUrl, menu.name)}
-                          title="คลิกเพื่อดูรูปภาพขนาดใหญ่"
-                        >
-                          <img
-                            src={menu.imageUrl}
-                            alt={menu.name}
-                            className="menu-thumb-img"
-                            onError={(e) => {
-                              e.target.parentElement.innerHTML = '<div class="menu-thumb-placeholder"><i class="fa-solid fa-bowl-food"></i></div>';
-                            }}
-                          />
-                          <div className="menu-thumb-zoom">
-                            <i className="fa-solid fa-magnifying-glass-plus"></i>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="menu-thumb-wrapper" style={{ cursor: 'default' }}>
-                          <div className="menu-thumb-placeholder">
-                            <i className="fa-solid fa-bowl-food"></i>
-                          </div>
-                        </div>
-                      )}
+                      <MenuThumbImage imageUrl={menu.imageUrl} name={menu.name} onZoomImage={onZoomImage} />
                     </td>
                     <td>
                       <span className="fw-bold text-dark">{menu.name}</span>

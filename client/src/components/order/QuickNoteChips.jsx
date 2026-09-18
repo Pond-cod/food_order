@@ -3,10 +3,11 @@ import React from 'react';
 const PRESET_NOTES = [
   { text: 'ไม่เผ็ด', icon: '🌶️', className: 'chip-spicy' },
   { text: 'เผ็ดน้อย', icon: '🔥', className: 'chip-mild' },
-  { text: 'พิเศษ', icon: '⭐', className: 'chip-special' },
+  { text: 'เผ็ดมาก', icon: '🌶️', className: 'chip-spicy' },
   { text: 'ไม่ใส่ผัก', icon: '🥬', className: 'chip-veggie' },
-  { text: 'แยกน้ำ', icon: '🥤', className: 'chip-drink' },
-  { text: 'ไข่ดาว', icon: '🍳', className: 'chip-egg' },
+  { text: 'แยกน้ำ/แยกกับ', icon: '🥤', className: 'chip-drink' },
+  { text: 'ไม่ใส่ชูรส', icon: '🧂', className: 'chip-veggie' },
+  { text: 'ขอน้ำปลาพริก', icon: '🥢', className: 'chip-special' },
 ];
 
 export default function QuickNoteChips({ note, setNote }) {

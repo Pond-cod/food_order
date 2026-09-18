@@ -8,16 +8,27 @@ export default function KitchenSummary({ orders = [], menus = [], currentRound =
   const computedKitchenCount = {};
 
   (orders || []).forEach((o) => {
-    if (o.status !== 'Cancelled') {
+    const status = String(o.status || '').toLowerCase();
+    if (status !== 'cancelled' && status !== 'ยกเลิก') {
       const qty = Number(o.quantity) || 1;
       computedBoxes += qty;
 
-      const m = (menus || []).find((item) => item.name === o.menuName);
-      const price = m ? m.price : 0;
-      computedRev += price * qty;
+      const rawMenuName = String(o.menuName || '').trim();
+      // ตัดวงเล็บตัวเลือกเสริมออก เช่น "ข้าวกะเพราหมูกรอบ (พิเศษ, +ไข่ดาว)" -> "ข้าวกะเพราหมูกรอบ"
+      const baseMenuName = rawMenuName.replace(/\s*\(.*?\)\s*$/, '').trim();
+
+      // ค้นหาเมนูเทียบทั้งแบบเต็มและแบบชื่อฐาน
+      const m = (menus || []).find((item) => item.name === rawMenuName || item.name === baseMenuName);
+      let unitPrice = m ? (Number(m.price) || 0) : 0;
+
+      // ตรวจสอบและบวกราคาตัวเลือกเสริม
+      if (rawMenuName.includes('พิเศษ')) unitPrice += 10;
+      if (rawMenuName.includes('ไข่ดาว')) unitPrice += 10;
+
+      computedRev += unitPrice * qty;
 
       if (o.round === currentRound) {
-        computedKitchenCount[o.menuName] = (computedKitchenCount[o.menuName] || 0) + qty;
+        computedKitchenCount[rawMenuName] = (computedKitchenCount[rawMenuName] || 0) + qty;
       }
     }
   });

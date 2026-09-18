@@ -52,16 +52,18 @@ export default function Navbar({ currentPage, onNavigate }) {
           )}
 
           {currentPage === 'order' ? (
-            <button 
-              type="button" 
-              className="btn btn-sm btn-outline-success text-white border-success d-flex align-items-center justify-content-center rounded-3 shadow-sm" 
-              style={{ width: '38px', height: '38px', fontSize: '15px' }}
-              onClick={() => onNavigate('admin')}
-              title="เข้าสู่ระบบจัดการผู้ดูแล"
-              aria-label="จัดการระบบ"
-            >
-              <i className="fa-solid fa-gear"></i>
-            </button>
+            isAdmin ? (
+              <button 
+                type="button" 
+                className="btn btn-sm btn-outline-success text-white border-success d-flex align-items-center justify-content-center rounded-3 shadow-sm" 
+                style={{ width: '38px', height: '38px', fontSize: '15px' }}
+                onClick={() => onNavigate('admin')}
+                title="เข้าสู่ระบบจัดการผู้ดูแล"
+                aria-label="จัดการระบบ"
+              >
+                <i className="fa-solid fa-gear"></i>
+              </button>
+            ) : null
           ) : (
             <button 
               type="button" 

@@ -23,15 +23,21 @@ export default function VisualMenuPicker({ menus, selectedMenu, onSelectMenu }) 
             >
               <div className="visual-card-img-wrap">
                 {menu.imageUrl ? (
-                  <img
-                    src={menu.imageUrl}
-                    alt={menu.name}
-                    className="visual-card-img"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.parentElement.innerHTML = '<div class="visual-card-placeholder"><i class="fa-solid fa-bowl-food"></i></div>';
-                    }}
-                  />
+                  <>
+                    <img
+                      src={menu.imageUrl}
+                      alt={menu.name}
+                      className="visual-card-img"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        const sibling = e.target.nextElementSibling;
+                        if (sibling) sibling.style.display = 'flex';
+                      }}
+                    />
+                    <div className="visual-card-placeholder" style={{ display: 'none' }}>
+                      <i className="fa-solid fa-bowl-food"></i>
+                    </div>
+                  </>
                 ) : (
                   <div className="visual-card-placeholder">
                     <i className="fa-solid fa-bowl-food"></i>

@@ -1,6 +1,33 @@
 import React, { useState } from 'react';
 import { formatCurrency } from '../../utils/formatters';
 
+function FoodCardImage({ menu }) {
+  const [hasError, setHasError] = React.useState(false);
+
+  if (!menu.imageUrl || hasError) {
+    return (
+      <div className="food-placeholder-warm">
+        <div className="food-placeholder-icon-wrap">
+          <span>🍲</span>
+        </div>
+        <small className="fw-bold" style={{ fontSize: '11px', color: '#D97706' }}>
+          เมนูอร่อย
+        </small>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={menu.imageUrl}
+      alt={menu.name}
+      className="food-card-img"
+      loading="lazy"
+      onError={() => setHasError(true)}
+    />
+  );
+}
+
 export default function FoodCatalogGrid({
   menus = [],
   cart = {},
@@ -87,38 +114,7 @@ export default function FoodCatalogGrid({
               >
                 {/* Food Image */}
                 <div className="food-card-img-wrap">
-                  {menu.imageUrl ? (
-                    <img
-                      src={menu.imageUrl}
-                      alt={menu.name}
-                      className="food-card-img"
-                      loading="lazy"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        if (e.target.parentElement) {
-                          e.target.parentElement.innerHTML = `
-                            <div class="food-placeholder-warm">
-                              <div class="food-placeholder-icon-wrap">
-                                <span>🍲</span>
-                              </div>
-                              <small class="fw-bold" style="font-size: 11px; color: #D97706;">
-                                เมนูอร่อย
-                              </small>
-                            </div>
-                          `;
-                        }
-                      }}
-                    />
-                  ) : (
-                    <div className="food-placeholder-warm">
-                      <div className="food-placeholder-icon-wrap">
-                        <span>🍛</span>
-                      </div>
-                      <small className="fw-bold" style={{ fontSize: '11px', color: '#D97706' }}>
-                        เมนูแนะนำ
-                      </small>
-                    </div>
-                  )}
+                  <FoodCardImage menu={menu} />
 
                   {/* Price Tag Pill */}
                   <div className="food-card-price-pill">
