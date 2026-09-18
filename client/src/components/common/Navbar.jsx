@@ -5,7 +5,16 @@ export default function Navbar({ currentPage, onNavigate }) {
   const { user, isAdmin, adminRole } = useAuth();
 
   return (
-    <nav className="navbar navbar-dark bg-dark sticky-top shadow-sm py-2 px-3">
+    <nav 
+      className="navbar navbar-dark sticky-top py-2 px-3"
+      style={{
+        background: 'rgba(15, 23, 42, 0.94)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+      }}
+    >
       <div className="container-fluid d-flex justify-content-between align-items-center">
         {/* Brand */}
         <div 
