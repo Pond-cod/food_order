@@ -68,6 +68,10 @@ export async function callDirectGas(endpoint, options = {}) {
   const userId = queryParams.get('userId') || adminUserId;
   const displayName = queryParams.get('displayName') || adminDisplayName;
 
+  queryParams.set('action', action);
+  if (userId) queryParams.set('userId', userId);
+  if (displayName) queryParams.set('displayName', displayName);
+
   // ตั้ง Timeout 12 วินาที ป้องกันการค้างตลอดกาล
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 12000);
@@ -76,7 +80,7 @@ export async function callDirectGas(endpoint, options = {}) {
 
   try {
     if (isGet) {
-      const url = `${GAS_DIRECT_URL}?action=${action}&userId=${encodeURIComponent(userId)}&displayName=${encodeURIComponent(displayName)}${queryString ? '&' + queryString : ''}`;
+      const url = `${GAS_DIRECT_URL}?${queryParams.toString()}`;
       const res = await fetch(url, { signal: controller.signal });
       clearTimeout(timeoutId);
       if (!res.ok) throw new Error(`GAS Direct HTTP Error: ${res.status}`);
