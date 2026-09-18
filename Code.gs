@@ -348,24 +348,37 @@ function doPost(e) {
     } catch (cacheErr) {}
 
     // -------------------------------------------------------------
-    // Action: order (ลูกค้าสั่งอาหาร)
+    // Action: order (ลูกค้าสั่งอาหาร - รองรับทั้งหลายเมนูในตะกร้าและแบบเมนูเดี่ยว)
     // -------------------------------------------------------------
     if (action === "order") {
       const round = payload.round || "-";
       const userId = payload.userId || "-";
       const displayName = payload.displayName || "ผู้ใช้ไม่ระบุชื่อ";
-      const menuName = payload.menuName || "";
-      const quantity = parseInt(payload.quantity, 10) || 1;
-      const note = payload.note || "-";
       const pictureUrl = payload.pictureUrl || "";
       const phone = payload.phone || "-";
       const department = payload.department || "-";
       const statusMessage = payload.statusMessage || "-";
-
-      if (!menuName) throw new Error("กรุณาเลือกเมนูอาหาร");
-
+      const generalNote = payload.note || "-";
       const timestamp = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
       const status = "Pending";
+
+      // แยกรายการเมนูอาหาร: รองรับทั้ง items array และ menuName แบบเดี่ยว
+      let orderItems = [];
+      if (Array.isArray(payload.items) && payload.items.length > 0) {
+        orderItems = payload.items;
+      } else if (payload.menuName) {
+        orderItems = [{
+          menuName: payload.menuName,
+          quantity: parseInt(payload.quantity, 10) || 1,
+          note: generalNote
+        }];
+      }
+
+      // กรองเฉพาะรายการที่ถูกต้อง
+      const validItems = orderItems.filter(it => it && it.menuName && String(it.menuName).trim() !== "");
+      if (validItems.length === 0) {
+        throw new Error("กรุณาเลือกรายการอาหารอย่างน้อย 1 รายการ");
+      }
 
       let orderSheet = ss.getSheetByName("Orders");
       if (!orderSheet) {
@@ -384,14 +397,42 @@ function doPost(e) {
         if (!headers[11]) orderSheet.getRange(1, 12).setValue("StatusMessage");
       }
 
-      orderSheet.appendRow([
-        timestamp, round, userId, displayName, menuName, quantity, note, status, pictureUrl, phone, department, statusMessage
-      ]);
+      // เตรียมชุดข้อมูลสำหรับเขียนลงชีทแบบ Batch (เร็วกว่า appendRow ทีละแถวมาก)
+      const rowsToAdd = validItems.map(item => {
+        const itemNote = (item.note && String(item.note).trim() !== "-" && String(item.note).trim() !== "") 
+          ? String(item.note).trim() 
+          : generalNote;
+        return [
+          timestamp,
+          round,
+          userId,
+          displayName,
+          String(item.menuName).trim(),
+          parseInt(item.quantity, 10) || 1,
+          itemNote,
+          status,
+          pictureUrl,
+          phone,
+          department,
+          statusMessage
+        ];
+      });
+
+      const nextRow = orderSheet.getLastRow() + 1;
+      orderSheet.getRange(nextRow, 1, rowsToAdd.length, 12).setValues(rowsToAdd);
 
       return jsonResponse({
         status: "success",
-        message: "บันทึกออเดอร์เรียบร้อยแล้ว",
-        data: { timestamp, round, displayName, menuName, quantity, phone, department }
+        message: `บันทึกออเดอร์ ${validItems.length} รายการเรียบร้อยแล้ว`,
+        data: {
+          timestamp,
+          round,
+          displayName,
+          itemCount: validItems.length,
+          items: validItems.map(it => ({ menuName: it.menuName, quantity: it.quantity })),
+          phone,
+          department
+        }
       });
     }
 

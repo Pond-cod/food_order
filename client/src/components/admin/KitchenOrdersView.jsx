@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import KitchenSummary from './KitchenSummary';
+import { DEFAULT_AVATAR } from '../../utils/assets';
 
 export default function KitchenOrdersView({
   orders = [],
@@ -202,11 +203,11 @@ export default function KitchenOrdersView({
                     <td onClick={() => onViewCustomer(order)}>
                       <div className="d-flex align-items-center gap-2">
                         <img
-                          src={order.pictureUrl || 'https://via.placeholder.com/32'}
+                          src={order.pictureUrl || DEFAULT_AVATAR}
                           alt={order.displayName}
                           className="rounded-circle border"
                           style={{ width: '32px', height: '32px', objectFit: 'cover' }}
-                          onError={(e) => { e.target.src = 'https://via.placeholder.com/32'; }}
+                          onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
                         />
                         <div className="overflow-hidden">
                           <div className="fw-bold text-dark text-truncate" style={{ maxWidth: '130px' }}>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatDisplayDate } from '../../utils/formatters';
+import { DEFAULT_AVATAR } from '../../utils/assets';
 
 export default function CustomerModal({ order, onClose }) {
   if (!order) return null;
@@ -28,10 +29,11 @@ export default function CustomerModal({ order, onClose }) {
             {/* Header Profile */}
             <div className="d-flex align-items-center gap-3 p-3 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-3 mb-3">
               <img
-                src={order.pictureUrl || 'https://via.placeholder.com/80'}
+                src={order.pictureUrl || DEFAULT_AVATAR}
                 alt="Profile"
                 className="rounded-circle border border-2 border-white shadow-sm"
                 style={{ width: '64px', height: '64px', objectFit: 'cover' }}
+                onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
               />
               <div className="overflow-hidden">
                 <h6 className="fw-bold mb-1 text-dark text-truncate">{order.displayName}</h6>

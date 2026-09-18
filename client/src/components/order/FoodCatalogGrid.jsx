@@ -3,9 +3,9 @@ import { formatCurrency } from '../../utils/formatters';
 
 export default function FoodCatalogGrid({
   menus = [],
-  selectedMenu,
-  onSelectMenu,
-  onZoomImage,
+  cart = {},
+  onAddToCart,
+  onUpdateQuantity,
 }) {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -68,16 +68,18 @@ export default function FoodCatalogGrid({
       ) : (
         <div className="food-grid">
           {filteredMenus.map((menu, idx) => {
-            const isSelected = Boolean(selectedMenu && selectedMenu.name === menu.name);
+            const cartItem = cart[menu.name];
+            const quantityInCart = cartItem ? cartItem.quantity : 0;
+            const isInCart = quantityInCart > 0;
             const isSoldOut = (menu.status || '').toLowerCase() === 'sold out' || menu.status === 'ปิดขาย';
 
             return (
               <div
                 key={menu.id || menu.name || idx}
-                className={`food-card-modern ${isSelected ? 'selected' : ''} ${isSoldOut ? 'opacity-50' : ''}`}
+                className={`food-card-modern ${isInCart ? 'selected' : ''} ${isSoldOut ? 'opacity-50' : ''}`}
                 onClick={() => {
-                  if (!isSoldOut) {
-                    onSelectMenu(menu);
+                  if (!isSoldOut && !isInCart) {
+                    onAddToCart(menu);
                   }
                 }}
               >
@@ -121,10 +123,10 @@ export default function FoodCatalogGrid({
                     ฿{Number(menu.price).toLocaleString()}
                   </div>
 
-                  {/* Selected Checkmark Badge */}
-                  {isSelected && (
-                    <div className="food-card-badge-selected" title="เลือกเมนูนี้แล้ว">
-                      <i className="fa-solid fa-check"></i>
+                  {/* Count in Cart Badge */}
+                  {isInCart && (
+                    <div className="food-card-badge-selected" title={`ในตะกร้า ${quantityInCart} กล่อง`}>
+                      <span style={{ fontSize: '11px', fontWeight: 'bold' }}>x{quantityInCart}</span>
                     </div>
                   )}
 
@@ -158,21 +160,40 @@ export default function FoodCatalogGrid({
                       <span className="badge bg-secondary opacity-75" style={{ fontSize: '10px' }}>
                         ปิดขาย
                       </span>
-                    ) : isSelected ? (
-                      <span 
-                        className="badge text-white rounded-pill px-2 py-1 d-flex align-items-center gap-1 shadow-sm"
-                        style={{ background: 'linear-gradient(135deg, #06C755, #05A044)', fontSize: '11px' }}
+                    ) : isInCart ? (
+                      <div 
+                        className="card-mini-stepper shadow-sm"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <i className="fa-solid fa-check" style={{ fontSize: '9px' }}></i>
-                        <span>เลือกแล้ว</span>
-                      </span>
+                        <button
+                          type="button"
+                          className="card-mini-stepper-btn minus"
+                          onClick={() => onUpdateQuantity(menu.name, -1)}
+                          title="ลดจำนวน"
+                        >
+                          <i className="fa-solid fa-minus"></i>
+                        </button>
+                        <span className="card-mini-stepper-count">{quantityInCart}</span>
+                        <button
+                          type="button"
+                          className="card-mini-stepper-btn plus"
+                          onClick={() => onUpdateQuantity(menu.name, 1)}
+                          title="เพิ่มจำนวน"
+                        >
+                          <i className="fa-solid fa-plus"></i>
+                        </button>
+                      </div>
                     ) : (
                       <button
                         type="button"
                         className="btn-select-food shadow-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddToCart(menu);
+                        }}
                       >
                         <i className="fa-solid fa-plus" style={{ fontSize: '9px' }}></i>
-                        <span>เลือก</span>
+                        <span>เพิ่ม</span>
                       </button>
                     )}
                   </div>

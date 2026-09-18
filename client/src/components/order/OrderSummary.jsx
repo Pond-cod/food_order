@@ -1,12 +1,114 @@
 import React from 'react';
 import { formatCurrency } from '../../utils/formatters';
 
-export default function OrderSummary({ selectedMenu, quantity, onSubmit, isSubmitting }) {
-  const unitPrice = selectedMenu ? selectedMenu.price : 0;
-  const total = unitPrice * quantity;
+export default function OrderSummary({
+  cartItems = [],
+  totalBoxes = 0,
+  totalPrice = 0,
+  onUpdateQuantity,
+  onRemoveItem,
+  onClearCart,
+  onSubmit,
+  isSubmitting,
+}) {
+  const hasItems = cartItems.length > 0;
 
   return (
     <div>
+      {/* Cart Items List */}
+      {hasItems ? (
+        <div className="mb-3">
+          <div className="d-flex justify-content-between align-items-center mb-2">
+            <span className="text-secondary small fw-semibold">
+              รายการที่เลือก ({cartItems.length} เมนู):
+            </span>
+            {onClearCart && (
+              <button
+                type="button"
+                className="btn btn-sm text-danger p-0 border-0"
+                style={{ fontSize: '11px' }}
+                onClick={onClearCart}
+              >
+                <i className="fa-regular fa-trash-can me-1"></i>
+                ล้างทั้งหมด
+              </button>
+            )}
+          </div>
+
+          <div style={{ maxHeight: '280px', overflowY: 'auto' }} className="pe-1">
+            {cartItems.map(({ menu, quantity }) => {
+              const unitPrice = Number(menu.price) || 0;
+              const subtotal = unitPrice * quantity;
+
+              return (
+                <div key={menu.name} className="cart-summary-item shadow-sm">
+                  <div className="d-flex justify-content-between align-items-start gap-2 mb-1">
+                    <strong className="text-dark text-truncate" style={{ fontSize: '13px', maxWidth: '170px' }}>
+                      {menu.name}
+                    </strong>
+                    <span className="fw-bold text-success" style={{ fontSize: '13.5px' }}>
+                      {formatCurrency(subtotal)}
+                    </span>
+                  </div>
+
+                  <div className="d-flex justify-content-between align-items-center">
+                    <small className="text-muted" style={{ fontSize: '11px' }}>
+                      {formatCurrency(unitPrice)} / กล่อง
+                    </small>
+
+                    {/* Mini Stepper & Delete */}
+                    <div className="d-flex align-items-center gap-1">
+                      <div className="card-mini-stepper">
+                        <button
+                          type="button"
+                          className="card-mini-stepper-btn minus"
+                          onClick={() => onUpdateQuantity(menu.name, -1)}
+                          title="ลดจำนวน"
+                        >
+                          <i className="fa-solid fa-minus"></i>
+                        </button>
+                        <span className="card-mini-stepper-count">{quantity}</span>
+                        <button
+                          type="button"
+                          className="card-mini-stepper-btn plus"
+                          onClick={() => onUpdateQuantity(menu.name, 1)}
+                          title="เพิ่มจำนวน"
+                        >
+                          <i className="fa-solid fa-plus"></i>
+                        </button>
+                      </div>
+
+                      {onRemoveItem && (
+                        <button
+                          type="button"
+                          className="btn btn-sm text-muted p-1 border-0"
+                          onClick={() => onRemoveItem(menu.name)}
+                          title="ลบรายการนี้"
+                        >
+                          <i className="fa-solid fa-xmark text-danger" style={{ fontSize: '12px' }}></i>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div 
+          className="rounded-4 p-3 text-center mb-3"
+          style={{
+            background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+            border: '2px dashed #F59E0B',
+          }}
+        >
+          <div className="fs-3 mb-1">🍱 👈</div>
+          <div className="fw-bold text-dark" style={{ fontSize: '13.5px' }}>ยังไม่มีรายการในตะกร้า</div>
+          <small className="text-secondary" style={{ fontSize: '11.5px' }}>แตะปุ่ม "+ เพิ่ม" ที่เมนูอาหารที่ต้องการสั่งได้เลยครับ</small>
+        </div>
+      )}
+
       {/* Receipt Breakdown Box */}
       <div 
         className="p-3 rounded-4 mb-3"
@@ -16,26 +118,22 @@ export default function OrderSummary({ selectedMenu, quantity, onSubmit, isSubmi
         }}
       >
         <div className="d-flex justify-content-between align-items-center text-secondary small mb-2">
-          <span>เมนูที่เลือก</span>
-          <strong className="text-dark text-truncate" style={{ maxWidth: '170px' }}>
-            {selectedMenu ? selectedMenu.name : 'ยังไม่ได้เลือก'}
+          <span>จำนวนรายการ</span>
+          <strong className="text-dark">
+            {cartItems.length} รายการ
           </strong>
         </div>
         <div className="d-flex justify-content-between align-items-center text-secondary small mb-2">
-          <span>ราคาต่อกล่อง</span>
-          <span className="fw-semibold text-dark">{selectedMenu ? formatCurrency(unitPrice) : '-'}</span>
-        </div>
-        <div className="d-flex justify-content-between align-items-center text-secondary small mb-2">
-          <span>จำนวน</span>
+          <span>จำนวนกล่องรวม</span>
           <span className="badge bg-white text-success border border-success border-opacity-25 px-2 py-1 fw-bold">
-            {quantity} กล่อง
+            {totalBoxes} กล่อง
           </span>
         </div>
         <hr className="my-2" style={{ borderColor: '#CBD5E1', borderStyle: 'dashed' }} />
         <div className="d-flex justify-content-between align-items-center pt-1">
           <span className="fw-bold text-dark fs-6">ยอดรวมทั้งหมด</span>
           <span className="fw-bold text-success fs-3 lh-1" style={{ color: '#05A044' }}>
-            {formatCurrency(total)}
+            {formatCurrency(totalPrice)}
           </span>
         </div>
       </div>
@@ -44,7 +142,7 @@ export default function OrderSummary({ selectedMenu, quantity, onSubmit, isSubmi
       <button
         type="button"
         className="btn btn-order-submit w-100 py-3 rounded-4 d-flex align-items-center justify-content-center gap-2 fs-6"
-        disabled={!selectedMenu || isSubmitting}
+        disabled={!hasItems || isSubmitting}
         onClick={onSubmit}
       >
         {isSubmitting ? (
@@ -52,10 +150,10 @@ export default function OrderSummary({ selectedMenu, quantity, onSubmit, isSubmi
             <span className="spinner-border spinner-border-sm" role="status"></span>
             <span>กำลังส่งออเดอร์...</span>
           </>
-        ) : selectedMenu ? (
+        ) : hasItems ? (
           <>
             <i className="fa-solid fa-circle-check fs-5"></i>
-            <span>ยืนยันสั่งอาหาร ({formatCurrency(total)})</span>
+            <span>ยืนยันสั่งอาหาร ({formatCurrency(totalPrice)})</span>
           </>
         ) : (
           <>

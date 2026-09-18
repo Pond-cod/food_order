@@ -1,4 +1,5 @@
 import React from 'react';
+import { DEFAULT_AVATAR } from '../../utils/assets';
 
 export default function UserProfile({ user }) {
   if (!user) return null;
@@ -7,10 +8,11 @@ export default function UserProfile({ user }) {
     <div className="d-flex align-items-center gap-3 pb-3 mb-3 border-bottom border-dashed">
       <div className="position-relative" style={{ width: '56px', height: '56px', flexShrink: 0 }}>
         <img 
-          src={user.pictureUrl || 'https://via.placeholder.com/80'} 
+          src={user.pictureUrl || DEFAULT_AVATAR} 
           alt="Avatar" 
           className="rounded-circle border border-2 border-white shadow-sm w-100 h-100" 
           style={{ objectFit: 'cover' }}
+          onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
         />
         <div 
           className="position-absolute bottom-0 end-0 bg-success text-white rounded-circle d-flex align-items-center justify-content-center border border-2 border-white"

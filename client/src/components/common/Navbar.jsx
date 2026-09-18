@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { DEFAULT_AVATAR } from '../../utils/assets';
 
 export default function Navbar({ currentPage, onNavigate }) {
   const { user, isAdmin, adminRole } = useAuth();
@@ -39,10 +40,11 @@ export default function Navbar({ currentPage, onNavigate }) {
           {user && (
             <div className="d-none d-sm-flex align-items-center gap-2 bg-secondary bg-opacity-25 px-2 py-1 rounded-pill text-white" style={{ fontSize: '12.5px' }}>
               <img 
-                src={user.pictureUrl || 'https://via.placeholder.com/40'} 
+                src={user.pictureUrl || DEFAULT_AVATAR} 
                 alt="Profile" 
                 className="rounded-circle border border-success" 
                 style={{ width: '26px', height: '26px', objectFit: 'cover' }}
+                onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
               />
               <span className="text-truncate" style={{ maxWidth: '120px' }}>{user.displayName}</span>
               {isAdmin && <span className="badge bg-success" style={{ fontSize: '10px' }}>{adminRole || 'Admin'}</span>}

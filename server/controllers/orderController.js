@@ -6,10 +6,11 @@ const sheetService = require('../services/sheetService');
  */
 async function placeOrder(req, res, next) {
   try {
-    const { round, userId, displayName, pictureUrl, statusMessage, phone, department, menuName, quantity, note } = req.body;
+    const { round, userId, displayName, pictureUrl, statusMessage, phone, department, menuName, quantity, note, items } = req.body;
 
-    if (!menuName) {
-      return res.status(400).json({ status: 'error', message: 'กรุณาเลือกเมนูอาหาร' });
+    const hasItems = Array.isArray(items) && items.length > 0;
+    if (!hasItems && !menuName) {
+      return res.status(400).json({ status: 'error', message: 'กรุณาเลือกเมนูอาหารอย่างน้อย 1 รายการ' });
     }
 
     const result = await sheetService.createOrder({
@@ -23,6 +24,7 @@ async function placeOrder(req, res, next) {
       menuName,
       quantity: parseInt(quantity, 10) || 1,
       note,
+      items: hasItems ? items : undefined,
     });
 
     res.json(result);

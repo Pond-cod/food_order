@@ -5,12 +5,12 @@ import { getAvailableMenus } from '../services/menuService';
 import { submitOrder } from '../services/orderService';
 import FoodCatalogGrid from '../components/order/FoodCatalogGrid';
 import StickyBottomBar from '../components/order/StickyBottomBar';
-import QuantityStepper from '../components/order/QuantityStepper';
 import ContactInputs from '../components/order/ContactInputs';
 import QuickNoteChips from '../components/order/QuickNoteChips';
 import OrderSummary from '../components/order/OrderSummary';
 import Loading from '../components/common/Loading';
 import { formatCurrency } from '../utils/formatters';
+import { DEFAULT_AVATAR } from '../utils/assets';
 
 export default function OrderPage() {
   const { user } = useAuth();
@@ -29,8 +29,8 @@ export default function OrderPage() {
     } catch (e) { return ''; }
   });
 
-  const [selectedMenu, setSelectedMenu] = useState(null);
-  const [quantity, setQuantity] = useState(1);
+  // ระบบตะกร้าสินค้า (Cart State): { [menuName]: { menu, quantity } }
+  const [cart, setCart] = useState({});
   const [phone, setPhone] = useState('');
   const [department, setDepartment] = useState('');
   const [note, setNote] = useState('');
@@ -75,17 +75,66 @@ export default function OrderPage() {
     }
   }
 
-  // แตะเลือกเมนู
-  function handleSelectMenu(menu) {
-    setSelectedMenu(menu);
+  // เพิ่มเมนูลงตะกร้า (เริ่มที่ 1 กล่อง)
+  function handleAddToCart(menu) {
+    setCart((prev) => {
+      const existing = prev[menu.name];
+      if (existing) {
+        return {
+          ...prev,
+          [menu.name]: { ...existing, quantity: existing.quantity + 1 },
+        };
+      }
+      return {
+        ...prev,
+        [menu.name]: { menu, quantity: 1 },
+      };
+    });
   }
 
+  // ปรับเพิ่ม/ลดจำนวนในตะกร้า
+  function handleUpdateQuantity(menuName, delta) {
+    setCart((prev) => {
+      const existing = prev[menuName];
+      if (!existing) return prev;
+      const newQty = existing.quantity + delta;
+      if (newQty <= 0) {
+        const next = { ...prev };
+        delete next[menuName];
+        return next;
+      }
+      return {
+        ...prev,
+        [menuName]: { ...existing, quantity: newQty },
+      };
+    });
+  }
+
+  // ลบรายการออกจากตะกร้า
+  function handleRemoveFromCart(menuName) {
+    setCart((prev) => {
+      const next = { ...prev };
+      delete next[menuName];
+      return next;
+    });
+  }
+
+  // ล้างตะกร้าทั้งหมด
+  function handleClearCart() {
+    setCart({});
+  }
+
+  // คำนวณสรุปยอดตะกร้า
+  const cartItems = Object.values(cart);
+  const totalBoxes = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = cartItems.reduce((sum, item) => sum + (item.quantity * (Number(item.menu.price) || 0)), 0);
+
   async function handleSubmitOrder() {
-    if (!selectedMenu) {
+    if (cartItems.length === 0) {
       Swal.fire({
         icon: 'warning',
-        title: 'ยังไม่ได้เลือกเมนู',
-        text: 'กรุณาแตะเลือกรายการอาหารที่ต้องการสั่งก่อนครับ',
+        title: 'ยังไม่มีรายการในตะกร้า',
+        text: 'กรุณาแตะปุ่ม "+ เพิ่ม" ที่เมนูอาหารที่ต้องการสั่งก่อนครับ',
         confirmButtonColor: '#06C755',
       });
       return;
@@ -101,25 +150,14 @@ export default function OrderPage() {
       return;
     }
 
-    const unitPrice = Number(selectedMenu.price) || 0;
-    const total = unitPrice * quantity;
-
-    // Pop-up ยืนยันการสั่งซื้อ
+    // Pop-up ยืนยันการสั่งซื้อแบบแจกแจงรายการทั้งหมด
     const result = await Swal.fire({
       title: 'ยืนยันการสั่งซื้อ?',
       html: `
-        <div style="text-align: left; font-size: 14px; background: #F8FAFC; padding: 16px; border-radius: 12px; border: 1px solid #E2E8F0;">
+        <div style="text-align: left; font-size: 13.5px; background: #F8FAFC; padding: 16px; border-radius: 14px; border: 1.5px solid #E2E8F0;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
             <span style="color: #64748B;">ผู้สั่ง:</span>
             <strong>${user ? user.displayName : 'ผู้สั่งอาหาร'}</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-            <span style="color: #64748B;">เมนู:</span>
-            <strong style="color: #0F172A;">${selectedMenu.name}</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-            <span style="color: #64748B;">จำนวน:</span>
-            <strong>${quantity} กล่อง</strong>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
             <span style="color: #64748B;">เบอร์โทร:</span>
@@ -134,15 +172,25 @@ export default function OrderPage() {
             <span style="color: #D97706;">${note || '-'}</span>
           </div>
           <hr style="margin: 10px 0; border: 0; border-top: 1px dashed #CBD5E1;">
+          <div style="font-weight: bold; color: #1E293B; margin-bottom: 6px;">รายการที่สั่ง (${cartItems.length} เมนู):</div>
+          <div style="max-height: 150px; overflow-y: auto; margin-bottom: 8px;">
+            ${cartItems.map(it => `
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 13px;">
+                <span>• ${it.menu.name} <b style="color: #05A044;">x${it.quantity}</b></span>
+                <strong>฿${(Number(it.menu.price) * it.quantity).toLocaleString()}</strong>
+              </div>
+            `).join('')}
+          </div>
+          <hr style="margin: 8px 0; border: 0; border-top: 1.5px solid #CBD5E1;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: bold; color: #1E293B;">ยอดรวมทั้งสิ้น:</span>
-            <strong style="font-size: 18px; color: #05A044;">${formatCurrency(total)}</strong>
+            <span style="font-weight: bold; color: #1E293B;">ยอดรวมทั้งสิ้น (${totalBoxes} กล่อง):</span>
+            <strong style="font-size: 19px; color: #05A044;">${formatCurrency(totalPrice)}</strong>
           </div>
         </div>
       `,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'ยืนยันสั่งอาหารทันที',
+      confirmButtonText: `ยืนยันสั่ง (${formatCurrency(totalPrice)})`,
       cancelButtonText: 'กลับไปแก้ไข',
       confirmButtonColor: '#06C755',
       cancelButtonColor: '#94A3B8',
@@ -168,22 +216,27 @@ export default function OrderPage() {
         statusMessage: user ? user.statusMessage : '',
         phone: phone || '-',
         department: department || '-',
-        menuName: selectedMenu.name,
-        quantity,
         note: note || '-',
+        items: cartItems.map(it => ({
+          menuName: it.menu.name,
+          quantity: it.quantity,
+          price: Number(it.menu.price) || 0,
+          note: note || '-',
+        })),
+        menuName: cartItems.map(it => `${it.menu.name} x${it.quantity}`).join(', '),
+        quantity: totalBoxes,
       });
 
       await Swal.fire({
         icon: 'success',
         title: 'บันทึกออเดอร์สำเร็จ!',
-        html: `ระบบส่งรายการ <b>${selectedMenu.name}</b> (${quantity} กล่อง) เข้าครัวเรียบร้อยแล้ว`,
-        timer: 2200,
+        html: `ระบบส่งรายการอาหาร <b>${cartItems.length} เมนู (${totalBoxes} กล่อง)</b> เข้าครัวเรียบร้อยแล้ว`,
+        timer: 2400,
         showConfirmButton: false,
       });
 
-      // รีเซ็ตหลังจากสั่งเสร็จ
-      setSelectedMenu(null);
-      setQuantity(1);
+      // ล้างตะกร้าหลังจากสั่งเสร็จ
+      setCart({});
       setNote('');
     } catch (err) {
       Swal.fire({
@@ -213,11 +266,11 @@ export default function OrderPage() {
             <div className="d-flex align-items-center gap-3">
               <div className="position-relative" style={{ width: '56px', height: '56px', flexShrink: 0 }}>
                 <img
-                  src={user?.pictureUrl || 'https://via.placeholder.com/80'}
+                  src={user?.pictureUrl || DEFAULT_AVATAR}
                   alt="Avatar"
                   className="rounded-circle border border-3 border-white shadow w-100 h-100"
                   style={{ objectFit: 'cover' }}
-                  onError={(e) => { e.target.src = 'https://via.placeholder.com/80'; }}
+                  onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
                 />
                 <div
                   className="position-absolute bottom-0 end-0 bg-white text-success rounded-circle d-flex align-items-center justify-content-center shadow-sm"
@@ -267,8 +320,9 @@ export default function OrderPage() {
           <div className="col-12 col-lg-7 col-xl-8">
             <FoodCatalogGrid
               menus={menus}
-              selectedMenu={selectedMenu}
-              onSelectMenu={handleSelectMenu}
+              cart={cart}
+              onAddToCart={handleAddToCart}
+              onUpdateQuantity={handleUpdateQuantity}
             />
 
             {/* Mobile-only Customization Box (Order inputs shown under catalog on mobile) */}
@@ -280,13 +334,54 @@ export default function OrderPage() {
                 >
                   <i className="fa-solid fa-sliders" style={{ fontSize: '13px' }}></i>
                 </div>
-                <h6 className="fw-bold text-dark mb-0">ระบุรายละเอียดการจัดส่ง</h6>
+                <h6 className="fw-bold text-dark mb-0">ข้อมูลจัดส่ง & หมายเหตุ</h6>
               </div>
 
-              <QuantityStepper
-                quantity={quantity}
-                onChangeQuantity={setQuantity}
-              />
+              {/* Mobile Cart Items Preview if items exist */}
+              {cartItems.length > 0 && (
+                <div className="mb-3 p-2 bg-light rounded-3 border">
+                  <div className="d-flex justify-content-between align-items-center mb-2 px-1">
+                    <span className="small fw-bold text-dark">
+                      🛒 ตะกร้าของคุณ ({cartItems.length} เมนู, {totalBoxes} กล่อง):
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-sm text-danger p-0 border-0"
+                      style={{ fontSize: '11px' }}
+                      onClick={handleClearCart}
+                    >
+                      ล้างตะกร้า
+                    </button>
+                  </div>
+                  {cartItems.map(({ menu, quantity }) => (
+                    <div key={menu.name} className="d-flex justify-content-between align-items-center bg-white p-2 rounded-2 mb-1 border shadow-sm">
+                      <span className="text-dark small text-truncate fw-semibold" style={{ maxWidth: '140px' }}>{menu.name}</span>
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="card-mini-stepper">
+                          <button
+                            type="button"
+                            className="card-mini-stepper-btn minus"
+                            onClick={() => handleUpdateQuantity(menu.name, -1)}
+                          >
+                            <i className="fa-solid fa-minus"></i>
+                          </button>
+                          <span className="card-mini-stepper-count">{quantity}</span>
+                          <button
+                            type="button"
+                            className="card-mini-stepper-btn plus"
+                            onClick={() => handleUpdateQuantity(menu.name, 1)}
+                          >
+                            <i className="fa-solid fa-plus"></i>
+                          </button>
+                        </div>
+                        <span className="fw-bold text-success small" style={{ minWidth: '45px', textAlign: 'right' }}>
+                          ฿{(Number(menu.price) * quantity).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <ContactInputs
                 phone={phone}
@@ -313,68 +408,28 @@ export default function OrderPage() {
                   >
                     <i className="fa-solid fa-basket-shopping" style={{ fontSize: '15px' }}></i>
                   </div>
-                  <h5 className="fw-bold text-dark mb-0">สรุปการสั่งอาหาร</h5>
+                  <h5 className="fw-bold text-dark mb-0">ตะกร้าสั่งอาหาร</h5>
                 </div>
-                {selectedMenu && (
+                {cartItems.length > 0 && (
                   <span className="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-1" style={{ fontSize: '11px' }}>
-                    พร้อมสั่ง 1 รายการ
+                    {totalBoxes} กล่อง
                   </span>
                 )}
               </div>
 
-              {/* Selected Menu Preview */}
-              {selectedMenu ? (
-                <div 
-                  className="p-3 rounded-4 mb-3 d-flex flex-row align-items-center gap-3"
-                  style={{
-                    background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
-                    border: '1.5px solid #10B981',
-                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.15)',
-                  }}
-                >
-                  <div className="rounded-3 overflow-hidden bg-white shadow-sm flex-shrink-0" style={{ width: '64px', height: '64px' }}>
-                    {selectedMenu.imageUrl ? (
-                      <img
-                        src={selectedMenu.imageUrl}
-                        alt={selectedMenu.name}
-                        className="w-100 h-100"
-                        style={{ objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <div className="w-100 h-100 d-flex align-items-center justify-content-center text-warning" style={{ background: '#FFFBEB' }}>
-                        <i className="fa-solid fa-bowl-food fs-3"></i>
-                      </div>
-                    )}
-                  </div>
-                  <div className="overflow-hidden flex-grow-1">
-                    <span className="badge bg-success text-white rounded-pill px-2 py-0 mb-1" style={{ fontSize: '10px' }}>
-                      ✓ เลือกแล้ว
-                    </span>
-                    <h6 className="fw-bold text-dark mb-0 text-truncate">{selectedMenu.name}</h6>
-                    <div className="text-success fw-bold" style={{ fontSize: '15px' }}>
-                      {formatCurrency(selectedMenu.price)} / กล่อง
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div 
-                  className="rounded-4 p-3 text-center mb-3"
-                  style={{
-                    background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
-                    border: '2px dashed #F59E0B',
-                  }}
-                >
-                  <div className="fs-3 mb-1">🍱 👈</div>
-                  <div className="fw-bold text-dark" style={{ fontSize: '13.5px' }}>แตะเลือกเมนูที่ต้องการสั่ง</div>
-                  <small className="text-secondary" style={{ fontSize: '11.5px' }}>คลิกเลือกเมนูอาหารจากตารางฝั่งซ้ายได้เลยครับ</small>
-                </div>
-              )}
-
-              {/* Quantity Stepper */}
-              <QuantityStepper
-                quantity={quantity}
-                onChangeQuantity={setQuantity}
+              {/* Cart Items List & Total */}
+              <OrderSummary
+                cartItems={cartItems}
+                totalBoxes={totalBoxes}
+                totalPrice={totalPrice}
+                onUpdateQuantity={handleUpdateQuantity}
+                onRemoveItem={handleRemoveFromCart}
+                onClearCart={handleClearCart}
+                onSubmit={handleSubmitOrder}
+                isSubmitting={isSubmitting}
               />
+
+              <hr className="my-3" style={{ borderColor: '#E2E8F0' }} />
 
               {/* Contact Inputs */}
               <ContactInputs
@@ -389,14 +444,6 @@ export default function OrderPage() {
                 note={note}
                 setNote={setNote}
               />
-
-              {/* Order Summary & Submit Button */}
-              <OrderSummary
-                selectedMenu={selectedMenu}
-                quantity={quantity}
-                onSubmit={handleSubmitOrder}
-                isSubmitting={isSubmitting}
-              />
             </div>
           </div>
         </div>
@@ -404,8 +451,9 @@ export default function OrderPage() {
 
       {/* Floating Sticky Bottom Bar for Mobile & LINE UX */}
       <StickyBottomBar
-        selectedMenu={selectedMenu}
-        quantity={quantity}
+        cartItems={cartItems}
+        totalBoxes={totalBoxes}
+        totalPrice={totalPrice}
         onSubmit={handleSubmitOrder}
         isSubmitting={isSubmitting}
       />

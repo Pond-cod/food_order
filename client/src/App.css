@@ -498,18 +498,88 @@ body {
   border: none;
   font-weight: 600;
   font-size: 11.5px;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 20px;
   box-shadow: 0 2px 8px rgba(6, 199, 85, 0.3);
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-select-food:hover {
   transform: translateY(-1px) scale(1.03);
   box-shadow: 0 4px 12px rgba(6, 199, 85, 0.4);
+}
+
+/* Card Embedded Mini Stepper (when item is in cart) */
+.card-mini-stepper {
+  display: inline-flex;
+  align-items: center;
+  background: #F0FDF4;
+  border: 1.5px solid #10B981;
+  border-radius: 20px;
+  padding: 2px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.card-mini-stepper-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.card-mini-stepper-btn.minus {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.card-mini-stepper-btn.minus:hover {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+.card-mini-stepper-btn.plus {
+  background: #06C755;
+  color: #FFFFFF;
+}
+
+.card-mini-stepper-btn.plus:hover {
+  background: #05A044;
+  transform: scale(1.08);
+}
+
+.card-mini-stepper-count {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: #065F46;
+  padding: 0 4px;
+  user-select: none;
+}
+
+/* Cart item in OrderSummary */
+.cart-summary-item {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+
+.cart-summary-item:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 /* Floating Sticky Bottom Bar for Mobile & LINE UX */

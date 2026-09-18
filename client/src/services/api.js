@@ -1,10 +1,30 @@
 const API_BASE_URL = '/api';
-const GAS_DIRECT_URL = "https://script.google.com/macros/s/AKfycbwdD1v1L2luhHfejCEXaloSQMjz30HIx4wqCiftc7xS0Ja9TRxXWuy1Y-q686IjJPiZlw/exec";
+const DEFAULT_GAS_DIRECT_URL = "https://script.google.com/macros/s/AKfycbwdD1v1L2luhHfejCEXaloSQMjz30HIx4wqCiftc7xS0Ja9TRxXWuy1Y-q686IjJPiZlw/exec";
+
+export function getGasDirectUrl() {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('custom_gas_url');
+    if (saved && saved.trim()) return saved.trim();
+  }
+  return (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GAS_URL)
+    ? import.meta.env.VITE_GAS_URL
+    : DEFAULT_GAS_DIRECT_URL;
+}
+
+/**
+ * เมนูสำรองกรณีเครือข่ายขัดข้อง หรือ GAS Web App อยู่ระหว่างอัปเดตเวอร์ชัน
+ */
+const FALLBACK_MENUS = [
+  { id: 1, name: "ข้าวกะเพราหมูกรอบ", price: 50, imageUrl: "https://lh3.googleusercontent.com/d/1c6_yEdavm5yKvsQ5zCJYsJ0PSyQIjwIR" },
+  { id: 2, name: "ข้าวผัดหมู", price: 45, imageUrl: "" },
+  { id: 3, name: "ข้าวไข่เจียวหมูสับ", price: 40, imageUrl: "" }
+];
 
 /**
  * เรียก Google Apps Script Web App โดยตรง (High Speed & Direct Connector)
  */
 export async function callDirectGas(endpoint, options = {}) {
+  const gasUrl = getGasDirectUrl();
   let action = '';
   let payload = {};
 
@@ -88,7 +108,7 @@ export async function callDirectGas(endpoint, options = {}) {
 
   try {
     if (isGet) {
-      const url = `${GAS_DIRECT_URL}?${queryParams.toString()}`;
+      const url = `${gasUrl}?${queryParams.toString()}`;
       const res = await fetch(url, { signal: controller.signal });
       clearTimeout(timeoutId);
       if (!res.ok) throw new Error(`GAS Direct HTTP Error: ${res.status}`);
@@ -103,7 +123,7 @@ export async function callDirectGas(endpoint, options = {}) {
         ...payload,
       };
 
-      const res = await fetch(GAS_DIRECT_URL, {
+      const res = await fetch(gasUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(reqPayload),
@@ -119,7 +139,34 @@ export async function callDirectGas(endpoint, options = {}) {
     if (err.name === 'AbortError') {
       throw new Error('การเชื่อมต่อใช้เวลานานเกินไป กรุณารีเฟรชหรือลองใหม่อีกครั้ง');
     }
-    throw err;
+
+    // กรณีอ่านข้อมูลหน้าสั่งอาหาร (action === getAppData) แล้วเจอ 404 ให้ดึงจาก Local Cache ป้องกันหน้าจอว่างเปล่า
+    if (action === 'getAppData') {
+      console.warn(`[API] GAS Web App Error (${err.message}). Using local cache fallback...`);
+      try {
+        const cached = localStorage.getItem('liff_food_order_cache');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.menus && parsed.menus.length > 0) {
+            return {
+              status: 'success',
+              round: parsed.round || 'รอบปกติ',
+              menus: parsed.menus,
+              isOfflineFallback: true,
+            };
+          }
+        }
+      } catch (e) {}
+
+      return {
+        status: 'success',
+        round: 'รอบปกติ',
+        menus: FALLBACK_MENUS,
+        isOfflineFallback: true,
+      };
+    }
+
+    throw new Error(`ไม่สามารถเชื่อมต่อ Google Apps Script ได้ (${err.message}) กรุณาตรวจสอบการปรับใช้ Web App`);
   }
 }
 

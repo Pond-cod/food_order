@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatDisplayDate } from '../../utils/formatters';
+import { DEFAULT_AVATAR } from '../../utils/assets';
 
 export default function OrdersTable({ orders, onUpdateStatus, onOpenCustomerModal }) {
   return (
@@ -55,10 +56,11 @@ export default function OrdersTable({ orders, onUpdateStatus, onOpenCustomerModa
                         title="ดูข้อมูลผู้สั่ง"
                       >
                         <img
-                          src={o.pictureUrl || 'https://via.placeholder.com/30'}
+                          src={o.pictureUrl || DEFAULT_AVATAR}
                           alt="Avatar"
                           className="rounded-circle border"
                           style={{ width: '26px', height: '26px', objectFit: 'cover' }}
+                          onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
                         />
                         <span className="fw-semibold text-dark text-truncate" style={{ maxWidth: '110px' }}>
                           {o.displayName}

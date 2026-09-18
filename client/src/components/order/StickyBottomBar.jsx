@@ -2,40 +2,39 @@ import React from 'react';
 import { formatCurrency } from '../../utils/formatters';
 
 export default function StickyBottomBar({
-  selectedMenu,
-  quantity = 1,
+  cartItems = [],
+  totalBoxes = 0,
+  totalPrice = 0,
   onSubmit,
   isSubmitting,
-  onOpenDrawer,
 }) {
-  const unitPrice = selectedMenu ? Number(selectedMenu.price) || 0 : 0;
-  const total = unitPrice * quantity;
+  const hasItems = totalBoxes > 0;
 
   return (
     <div className="sticky-bottom-bar d-lg-none">
       <div className="container p-0">
         <div className="d-flex align-items-center justify-content-between gap-2">
-          {/* Left: Selected Menu Info or Prompt */}
+          {/* Left: Cart Info or Prompt */}
           <div className="overflow-hidden flex-grow-1" style={{ maxWidth: '60%' }}>
-            {selectedMenu ? (
+            {hasItems ? (
               <div>
-                <div className="d-flex align-items-center gap-1 text-dark fw-bold text-truncate" style={{ fontSize: '13.5px' }}>
+                <div className="d-flex align-items-center gap-1 text-dark fw-bold text-truncate" style={{ fontSize: '13px' }}>
                   <span className="badge bg-success rounded-pill px-2 py-0 me-1" style={{ fontSize: '11px' }}>
-                    x{quantity}
+                    {totalBoxes} กล่อง
                   </span>
-                  <span className="text-truncate">{selectedMenu.name}</span>
+                  <span className="text-truncate">{cartItems.length} เมนูที่เลือก</span>
                 </div>
                 <div className="d-flex align-items-baseline gap-1 mt-1">
-                  <small className="text-muted" style={{ fontSize: '11px' }}>รวมทั้งสิ้น:</small>
-                  <span className="fw-bold text-success" style={{ fontSize: '16px' }}>
-                    {formatCurrency(total)}
+                  <small className="text-muted" style={{ fontSize: '11px' }}>ยอดรวม:</small>
+                  <span className="fw-bold text-success" style={{ fontSize: '17px', color: '#05A044' }}>
+                    {formatCurrency(totalPrice)}
                   </span>
                 </div>
               </div>
             ) : (
               <div className="text-muted small d-flex align-items-center gap-1">
                 <i className="fa-solid fa-hand-pointer text-warning"></i>
-                <span style={{ fontSize: '12.5px' }}>แตะเลือกเมนูด้านบน</span>
+                <span style={{ fontSize: '12px' }}>แตะ + ที่เมนูด้านบน</span>
               </div>
             )}
           </div>
@@ -45,8 +44,8 @@ export default function StickyBottomBar({
             <button
               type="button"
               className="btn btn-order-submit rounded-pill px-3 py-2 fw-bold d-flex align-items-center gap-2"
-              style={{ fontSize: '14px' }}
-              disabled={!selectedMenu || isSubmitting}
+              style={{ fontSize: '13.5px' }}
+              disabled={!hasItems || isSubmitting}
               onClick={onSubmit}
             >
               {isSubmitting ? (
@@ -54,10 +53,10 @@ export default function StickyBottomBar({
                   <span className="spinner-border spinner-border-sm" role="status"></span>
                   <span>กำลังส่ง...</span>
                 </>
-              ) : selectedMenu ? (
+              ) : hasItems ? (
                 <>
                   <i className="fa-solid fa-circle-check fs-6"></i>
-                  <span>สั่งเลย ({formatCurrency(total)})</span>
+                  <span>สั่งเลย ({formatCurrency(totalPrice)})</span>
                 </>
               ) : (
                 <>
