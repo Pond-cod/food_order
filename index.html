@@ -1319,6 +1319,8 @@
         department: department || "-",
         menuName: selectedMenu.name,
         quantity: qty,
+        price: selectedMenu.price || 0,
+        total: total || 0,
         note: note || "-"
       };
 
@@ -1332,12 +1334,20 @@
           body: JSON.stringify(orderPayload)
         });
 
-        // ตรวจสอบการตอบกลับ
+        const resData = await response.json();
+
+        // แสดงข้อความตอบกลับ
+        let successHtml = `ระบบได้รับออเดอร์ <b>${escapeHtml(selectedMenu.name)}</b> เรียบร้อยแล้ว`;
+        if (resData.linePushed) {
+          successHtml += `<br><span style="color:#059669; font-weight:600; font-size:13px;"><i class="fa-solid fa-circle-check"></i> ส่งใบเสร็จไปยังแชท LINE OA เรียบร้อยแล้วค่ะ</span>`;
+        }
+        successHtml += `<br><small style="color:#64748B;">หน้าต่างจะปิดลงอัตโนมัติ</small>`;
+
         await Swal.fire({
           icon: 'success',
           title: 'บันทึกออเดอร์สำเร็จ!',
-          html: `ระบบได้รับออเดอร์ <b>${selectedMenu.name}</b> เรียบร้อยแล้ว<br><small style="color:#64748B;">หน้าต่างจะปิดลงอัตโนมัติ</small>`,
-          timer: 2500,
+          html: successHtml,
+          timer: 3000,
           timerProgressBar: true,
           showConfirmButton: false
         });
@@ -1366,6 +1376,16 @@
         submitBtn.disabled = false;
         updateSummary();
       }
+    }
+
+    function escapeHtml(text) {
+      if (text === null || text === undefined) return "";
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
 
     // เริ่มทำงานเมื่อเอกสารโหลดเสร็จ

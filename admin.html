@@ -901,6 +901,116 @@
       gap: 6px;
       font-size: 13.5px;
     }
+
+    /* LINE OA & Flex Message Styles */
+    .flex-preview-box {
+      background: white;
+      border: 1px solid #CBD5E1;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      max-width: 360px;
+      margin: 0 auto;
+      text-align: left;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .flex-preview-hero {
+      width: 100%;
+      height: 140px;
+      background: #F1F5F9;
+      overflow: hidden;
+    }
+
+    .flex-preview-hero img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .flex-preview-body {
+      padding: 14px 16px 12px 16px;
+    }
+
+    .flex-preview-notice {
+      background: #FEF2F2;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      color: #DC2626;
+      font-weight: 700;
+      margin-top: 8px;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .flex-preview-footer {
+      padding: 0 16px 14px 16px;
+    }
+
+    .flex-preview-cta {
+      background: #06C755;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 700;
+      box-shadow: 0 2px 6px rgba(6, 199, 85, 0.25);
+    }
+
+    .badge-line-connected {
+      background: #DCFCE7;
+      color: #15803D;
+      border: 1px solid #86EFAC;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-line-disconnected {
+      background: #FEE2E2;
+      color: #DC2626;
+      border: 1px solid #FCA5A5;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .settings-input-group {
+      margin-bottom: 18px;
+    }
+
+    .settings-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #334155;
+    }
+
+    .settings-input {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: white;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .settings-input:focus {
+      border-color: var(--primary);
+    }
   </style>
 </head>
 <body>
@@ -979,6 +1089,10 @@
         <i class="fa-solid fa-clipboard-list"></i>
         <span>ออเดอร์ & ครัว</span>
       </button>
+      <button class="tab-btn" onclick="switchTab('settingsTab')">
+        <i class="fa-brands fa-line" style="color:#06C755;"></i>
+        <span>LINE OA & ตั้งค่า</span>
+      </button>
       <button class="tab-btn" onclick="switchTab('adminTab')">
         <i class="fa-solid fa-users-gear"></i>
         <span>ผู้ดูแลระบบ</span>
@@ -1027,7 +1141,7 @@
     <!-- TAB 2: ตั้งค่ารอบการสั่ง -->
     <!-- ========================================================= -->
     <section id="roundTab" class="tab-content" style="display: none;">
-      <div class="card" style="max-width: 650px; margin: 0 auto;">
+      <div class="card" style="max-width: 680px; margin: 0 auto;">
         <div class="card-header">
           <h2 class="card-title"><i class="fa-regular fa-clock"></i> กำหนดรอบการสั่งอาหาร</h2>
         </div>
@@ -1039,11 +1153,11 @@
 
         <div style="margin-bottom: 16px;">
           <label style="display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 8px;">พิมพ์ชื่อรอบใหม่:</label>
-          <input type="text" id="roundInput" class="btn-secondary" style="width: 100%; text-align: left; padding: 12px 14px; font-size: 15px; background: white;" placeholder="เช่น รอบเที่ยง 17 ก.ย.">
+          <input type="text" id="roundInput" class="btn-secondary" style="width: 100%; text-align: left; padding: 12px 14px; font-size: 15px; background: white;" placeholder="เช่น รอบเที่ยง 17 ก.ย." oninput="updateLiveFlexPreview()">
         </div>
 
         <!-- Quick Presets -->
-        <div style="margin-bottom: 24px;">
+        <div style="margin-bottom: 20px;">
           <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">ปุ่มลัดเลือกด่วน:</div>
           <div style="display: flex; flex-wrap: wrap; gap: 8px;">
             <button type="button" class="btn-secondary" style="font-size: 12px;" onclick="setPresetRound('รอบเช้า')">รอบเช้า</button>
@@ -1056,6 +1170,70 @@
         <button type="button" class="btn-primary" style="width: 100%; justify-content: center; padding: 12px;" onclick="saveNewRound()">
           <i class="fa-solid fa-floppy-disk"></i> บันทึกรอบการสั่งอาหาร
         </button>
+
+        <!-- LINE OA Broadcast & Group Sharing Card -->
+        <div style="margin-top: 28px; padding-top: 24px; border-top: 2px dashed #E2E8F0;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <h3 style="font-size: 15px; font-weight: 700; color: #0F172A; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-brands fa-line" style="color: #06C755; font-size: 20px;"></i>
+              ส่งการ์ดแจ้งเปิดรอบไปยัง LINE OA & กลุ่มแชท
+            </h3>
+            <span id="roundLineStatusBadge" class="badge-line-disconnected">ยังไม่ระบุ Token</span>
+          </div>
+
+          <p style="font-size: 12.5px; color: #64748B; margin-bottom: 14px; line-height: 1.5;">
+            ส่งการ์ด Flex Message สวยงามพร้อมปุ่มกดสั่งอาหาร (LIFF) เชิญชวนลูกค้าในแชท LINE OA หรือแชร์ลงกลุ่ม LINE ได้ทันที
+          </p>
+
+          <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: #334155;">
+              ⏰ ข้อความกำกับ / เวลาปิดรับออเดอร์:
+            </label>
+            <input type="text" id="roundNoticeInput" class="btn-secondary" style="width: 100%; text-align: left; padding: 10px 12px; font-size: 13.5px; background: white;" placeholder="เช่น ปิดรับ 10:30 น. จัดส่ง 11:45 น." oninput="updateLiveFlexPreview()">
+          </div>
+
+          <!-- Flex Card Mock Preview -->
+          <div style="margin-bottom: 18px;">
+            <div style="font-size: 12px; font-weight: 600; color: #64748B; margin-bottom: 8px;">ตัวอย่างการ์ดที่จะแสดงใน LINE:</div>
+            <div id="flexPreviewContainer" class="flex-preview-box">
+              <div class="flex-preview-hero">
+                <img id="flexPreviewHeroImg" src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80" alt="Hero Banner">
+              </div>
+              <div class="flex-preview-body">
+                <div style="font-size: 16px; font-weight: 800; color: #0F172A;">🍱 เปิดรับออเดอร์แล้ว!</div>
+                <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                  <span style="font-size: 12px; color: #64748B;">รอบ:</span>
+                  <span id="flexPreviewRound" style="font-size: 14px; font-weight: 700; color: #059669;">รอบปกติ</span>
+                </div>
+                <div id="flexPreviewNotice" class="flex-preview-notice">
+                  ⏰ ปิดรับออเดอร์ล่วงหน้า จัดส่งตามรอบ
+                </div>
+                <div style="border-top: 1px dashed #E2E8F0; margin: 10px 0 8px 0;"></div>
+                <div style="font-size: 11px; font-weight: 700; color: #64748B; margin-bottom: 4px;">📋 เมนูแนะนำประจำรอบนี้:</div>
+                <div id="flexPreviewMenuList" style="font-size: 12px; color: #334155; line-height: 1.6;">
+                  กำลังโหลดเมนู...
+                </div>
+              </div>
+              <div class="flex-preview-footer">
+                <div class="flex-preview-cta">🛒 กดสั่งอาหารที่นี่ (เปิด LINE LIFF)</div>
+                <div style="font-size: 10px; color: #94A3B8; text-align: center; margin-top: 4px;">สะดวก รวดเร็ว ไม่ต้องรอพิมพ์ตอบ</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <button type="button" class="btn-primary" style="background: #06C755; border-color: #05A044; justify-content: center; padding: 12px; font-weight: 700;" onclick="broadcastRoundViaLine()">
+              <i class="fa-solid fa-bullhorn"></i> บรอดแคสต์ผ่าน LINE OA
+            </button>
+            <button type="button" class="btn-primary" style="background: #0284C7; border-color: #0369A1; justify-content: center; padding: 12px; font-weight: 700;" onclick="shareRoundViaLiff()">
+              <i class="fa-solid fa-share-nodes"></i> แชร์ลงกลุ่ม LINE (ฟรี)
+            </button>
+          </div>
+          <div style="font-size: 11px; color: #64748B; margin-top: 10px; text-align: center; line-height: 1.5;">
+            💡 <b>ปุ่มแชร์ลงกลุ่ม LINE (Share Target Picker):</b> ใช้ส่งการ์ดเข้ากลุ่มออฟฟิศ/คอนโดได้ทันทีโดย<b>ไม่เสียโควต้าข้อความบรอดแคสต์ฟรี</b>ของ LINE OA
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1139,6 +1317,106 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- TAB: LINE OA & ตั้งค่าระบบ -->
+    <!-- ========================================================= -->
+    <section id="settingsTab" class="tab-content" style="display: none;">
+      <div style="max-width: 720px; margin: 0 auto; display: grid; gap: 20px;">
+
+        <!-- Card 1: LINE Messaging API Connection -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title" style="display: flex; align-items: center; gap: 8px;">
+                <i class="fa-brands fa-line" style="color: #06C755; font-size: 24px;"></i>
+                การเชื่อมต่อ LINE Official Account
+              </h2>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                เชื่อมต่อระบบเข้ากับ LINE Messaging API เพื่อส่งใบเสร็จ, บรอดแคสต์รอบสั่งอาหาร, และแชทบอทตอบกลับ
+              </p>
+            </div>
+            <div id="settingsLineStatusBadge" class="badge-line-disconnected">ยังไม่ระบุ Token</div>
+          </div>
+
+          <div class="settings-input-group">
+            <label class="settings-label">
+              LINE Channel Access Token (Long-Lived):
+            </label>
+            <div style="display: flex; gap: 8px;">
+              <input type="password" id="settingsLineTokenInput" class="settings-input" placeholder="วาง Channel Access Token จาก LINE Developers Console">
+              <button type="button" class="btn-secondary" onclick="toggleTokenVisibility()" title="แสดง/ซ่อน Token">
+                <i id="tokenEyeIcon" class="fa-regular fa-eye"></i>
+              </button>
+            </div>
+            <small style="font-size: 11px; color: #64748B; margin-top: 4px; display: block;">
+              คัดลอกได้จาก LINE Developers Console > Messaging API channel > แท็บ Messaging API > Channel access token
+            </small>
+          </div>
+
+          <div class="settings-input-group">
+            <label class="settings-label">
+              Webhook URL (นำไปวางใน LINE Developers Console):
+            </label>
+            <div class="copy-box" style="margin: 0;">
+              <span id="webhookUrlDisplay" style="font-size: 12px;">กำลังโหลด...</span>
+              <button type="button" class="btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="copyWebhookUrl()">
+                <i class="fa-regular fa-copy"></i> คัดลอก
+              </button>
+            </div>
+            <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 10px 12px; margin-top: 8px; font-size: 11.5px; color: #1E40AF; line-height: 1.5;">
+              📌 <b>วิธีเปิดใช้งาน Webhook:</b><br>
+              1. ไปที่ <a href="https://developers.line.biz/" target="_blank" style="color: #2563EB; font-weight: 600;">LINE Developers Console</a> > Channel Messaging API ของคุณ<br>
+              2. ช่อง <b>Webhook URL</b> นำลิงก์ด้านบนไปวาง แล้วกด <b>Update</b><br>
+              3. เปิดสวิตช์ <b>Use webhook</b> ให้เป็นสีเขียว (ON)
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 8px;">
+            <button type="button" class="btn-primary" style="flex: 1; justify-content: center; padding: 11px;" onclick="saveLineTokenSetting()">
+              <i class="fa-solid fa-floppy-disk"></i> บันทึก Channel Access Token
+            </button>
+            <button type="button" class="btn-secondary" style="color: #059669; padding: 11px 16px;" onclick="testLinePushMessage()">
+              <i class="fa-solid fa-paper-plane"></i> ทดสอบส่งเข้า LINE ฉัน
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 2: Shop & Auto-reply Bot Info -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title"><i class="fa-solid fa-store"></i> ข้อมูลร้านค้า & ข้อความตอบกลับอัตโนมัติ</h2>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="settings-input-group">
+              <label class="settings-label">เบอร์พร้อมเพย์ (PromptPay):</label>
+              <input type="text" id="settingsPromptPayNumber" class="settings-input" placeholder="เช่น 081-234-5678">
+            </div>
+            <div class="settings-input-group">
+              <label class="settings-label">ชื่อบัญชีพร้อมเพย์:</label>
+              <input type="text" id="settingsPromptPayName" class="settings-input" placeholder="เช่น ร้านข้าวแกงป้าแดง">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="settings-input-group">
+              <label class="settings-label">เบอร์โทรศัพท์ติดต่อร้าน:</label>
+              <input type="text" id="settingsShopPhone" class="settings-input" placeholder="เช่น 089-123-4567">
+            </div>
+            <div class="settings-input-group">
+              <label class="settings-label">ข้อความแจ้งเตือนรอบเริ่มต้น:</label>
+              <input type="text" id="settingsShopNotice" class="settings-input" placeholder="เช่น ปิดรับ 10:30 น. จัดส่ง 11:45 น.">
+            </div>
+          </div>
+
+          <button type="button" class="btn-primary" style="width: 100%; justify-content: center; padding: 11px;" onclick="saveShopSettings()">
+            <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลร้านค้า & ข้อความบอท
+          </button>
+        </div>
+
       </div>
     </section>
 
@@ -1318,6 +1596,10 @@
       // 4. เรนเดอร์ผู้ดูแล
       renderAdminTab();
 
+      // 5. เรนเดอร์การตั้งค่า LINE OA
+      renderSettingsTab();
+      updateLiveFlexPreview();
+
       // ซ่อนหน้า Loading และแสดง Dashboard
       document.getElementById('adminLoading').style.display = 'none';
       document.getElementById('accessDeniedView').style.display = 'none';
@@ -1392,8 +1674,27 @@
      * เรนเดอร์แท็บรอบการสั่ง
      */
     function renderRoundTab() {
-      document.getElementById('displayCurrentRound').innerText = dashboardData.currentRound || "ยังไม่ได้กำหนดรอบ";
+      const currentRound = dashboardData.currentRound || "ยังไม่ได้กำหนดรอบ";
+      document.getElementById('displayCurrentRound').innerText = currentRound;
       document.getElementById('roundInput').value = dashboardData.currentRound || "";
+      
+      const shopNotice = (dashboardData.settings && dashboardData.settings.shopNotice) ? dashboardData.settings.shopNotice : "";
+      const noticeInput = document.getElementById('roundNoticeInput');
+      if (noticeInput && !noticeInput.value) {
+        noticeInput.value = shopNotice;
+      }
+
+      // อัปเดตสถานะ Badge การเชื่อมต่อ LINE
+      const isConnected = dashboardData.settings && dashboardData.settings.isLineConnected;
+      const roundBadge = document.getElementById('roundLineStatusBadge');
+      if (roundBadge) {
+        roundBadge.className = isConnected ? "badge-line-connected" : "badge-line-disconnected";
+        roundBadge.innerHTML = isConnected 
+          ? '<i class="fa-solid fa-circle-check"></i> พร้อมบรอดแคสต์' 
+          : '<i class="fa-solid fa-circle-xmark"></i> ยังไม่ระบุ Token';
+      }
+
+      updateLiveFlexPreview();
     }
 
     /**
@@ -1408,7 +1709,6 @@
       orders.forEach(o => {
         if (o.status !== "Cancelled") {
           totalBoxes += o.quantity;
-          // หาราคาเมนู
           const m = dashboardData.menus.find(item => item.name === o.menuName);
           const price = m ? m.price : 0;
           totalRev += (price * o.quantity);
@@ -1422,7 +1722,6 @@
       // สรุปยอดครัว (Kitchen Summary)
       const kitchenBox = document.getElementById('kitchenSummaryBox');
       kitchenBox.innerHTML = "";
-      // คำนวณยอดห้องครัวสำหรับรอบปัจจุบันแบบ Real-time
       const kSummary = {};
       orders.forEach(o => {
         if (o.round === dashboardData.currentRound && o.status !== "Cancelled") {
@@ -1457,6 +1756,9 @@
         if (o.status === "Completed") {
           statusBadge = "badge-completed";
           statusText = "ปรุงเสร็จแล้ว";
+        } else if (o.status === "Cooking") {
+          statusBadge = "badge-available";
+          statusText = "กำลังปรุง 🍳";
         } else if (o.status === "Cancelled") {
           statusBadge = "badge-cancelled";
           statusText = "ยกเลิก";
@@ -1480,11 +1782,14 @@
           <td><span style="color:#64748B; font-size:12.5px;">${escapeHtml(o.note || '-')}</span></td>
           <td><span class="badge ${statusBadge}">${statusText}</span></td>
           <td style="text-align: right; white-space: nowrap;">
-            <button class="btn-secondary" style="padding: 3px 8px; font-size: 11.5px; color:#15803D;" onclick="updateOrderStatus(${o.rowIndex}, 'Completed')">
+            <button class="btn-secondary" style="padding: 3px 7px; font-size: 11px; color:#D97706;" onclick="updateOrderStatus(${o.rowIndex}, 'Cooking')" title="ปรับสถานะเป็นกำลังปรุงอาหาร">
+              🍳 ทำ
+            </button>
+            <button class="btn-secondary" style="padding: 3px 7px; font-size: 11px; color:#15803D;" onclick="updateOrderStatus(${o.rowIndex}, 'Completed')" title="ปรับสถานะเป็นปรุงเสร็จแล้ว">
               ✓ เสร็จ
             </button>
-            <button class="btn-secondary" style="padding: 3px 8px; font-size: 11.5px; color:#DC2626;" onclick="updateOrderStatus(${o.rowIndex}, 'Cancelled')">
-              ✕ ยกเลิก
+            <button class="btn-secondary" style="padding: 3px 7px; font-size: 11px; color:#DC2626;" onclick="updateOrderStatus(${o.rowIndex}, 'Cancelled')" title="ยกเลิกออเดอร์">
+              ✕
             </button>
           </td>
         `;
@@ -1930,20 +2235,377 @@
     }
 
     /**
-     * อัปเดตสถานะออเดอร์
+     * อัปเดตสถานะออเดอร์ (พร้อมถามความจำนงส่งแจ้งเตือนใน LINE)
      */
     async function updateOrderStatus(rowIndex, newStatus) {
+      const o = dashboardData.orders.find(item => item.rowIndex === rowIndex);
+      let notify = false;
+      const isConnected = dashboardData.settings && dashboardData.settings.isLineConnected;
+
+      if (o && o.userId && o.userId.startsWith('U') && isConnected) {
+        let actionLabel = "ปรุงเสร็จแล้ว";
+        if (newStatus === "Cooking") actionLabel = "กำลังปรุงอาหาร";
+        else if (newStatus === "Cancelled") actionLabel = "ยกเลิกออเดอร์";
+
+        const confirmResult = await Swal.fire({
+          title: `ปรับสถานะเป็น "${actionLabel}"?`,
+          html: `ต้องการส่งข้อความแจ้งเตือนหาคุณ <b>${escapeHtml(o.displayName)}</b> ในแชท LINE OA ด้วยหรือไม่?`,
+          icon: 'question',
+          showCancelButton: true,
+          showDenyButton: true,
+          confirmButtonText: '🔔 ปรับสถานะ + ส่งแจ้งเตือนใน LINE',
+          denyButtonText: 'ปรับสถานะอย่างเดียว (ไม่แจ้งเตือน)',
+          cancelButtonText: 'ยกเลิก',
+          confirmButtonColor: '#06C755',
+          denyButtonColor: '#64748B',
+          reverseButtons: true
+        });
+
+        if (confirmResult.isDismissed) return;
+        notify = confirmResult.isConfirmed;
+      }
+
       try {
-        await postAdminAction({
+        const res = await postAdminAction({
           action: "updateOrderStatus",
           rowIndex: rowIndex,
-          newStatus: newStatus
+          newStatus: newStatus,
+          notifyCustomer: notify
         });
-        const o = dashboardData.orders.find(item => item.rowIndex === rowIndex);
         if (o) o.status = newStatus;
         renderOrderTab();
+        if (notify) {
+          Swal.fire({
+            icon: 'success',
+            title: 'สำเร็จ',
+            text: res.message || `ปรับสถานะเป็น "${newStatus}" และส่งการแจ้งเตือนเรียบร้อยแล้ว`,
+            timer: 2000,
+            showConfirmButton: false
+          });
+        }
       } catch (e) {
         Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: e.message });
+      }
+    }
+
+    /**
+     * อัปเดตการแสดงผล Live Flex Preview ในแท็บรอบ
+     */
+    function updateLiveFlexPreview() {
+      const roundInput = document.getElementById('roundInput');
+      const noticeInput = document.getElementById('roundNoticeInput');
+      const roundText = (roundInput && roundInput.value.trim()) ? roundInput.value.trim() : (dashboardData.currentRound || "รอบปกติ");
+      const noticeText = (noticeInput && noticeInput.value.trim()) ? noticeInput.value.trim() : "⏰ ปิดรับออเดอร์ล่วงหน้า จัดส่งตามรอบ";
+
+      const previewRound = document.getElementById('flexPreviewRound');
+      if (previewRound) previewRound.innerText = roundText;
+
+      const previewNotice = document.getElementById('flexPreviewNotice');
+      if (previewNotice) {
+        if (noticeText) {
+          previewNotice.innerText = noticeText.startsWith('⏰') ? noticeText : ("⏰ " + noticeText);
+          previewNotice.style.display = "inline-block";
+        } else {
+          previewNotice.style.display = "none";
+        }
+      }
+
+      // เมนูตัวอย่างใน Flex Preview
+      const menuListDiv = document.getElementById('flexPreviewMenuList');
+      const heroImg = document.getElementById('flexPreviewHeroImg');
+      if (menuListDiv && dashboardData.menus) {
+        const availableMenus = dashboardData.menus.filter(m => m.status === 'Available');
+        if (availableMenus.length === 0) {
+          menuListDiv.innerHTML = '<span style="color:#94A3B8;">(ยังไม่มีเมนูเปิดขายในรอบนี้)</span>';
+        } else {
+          const previewItems = availableMenus.slice(0, 4);
+          menuListDiv.innerHTML = previewItems.map(m => `
+            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+              <span>• ${escapeHtml(m.name)}</span>
+              <span style="font-weight:700; color:#059669;">฿${m.price}</span>
+            </div>
+          `).join('');
+
+          if (heroImg && previewItems[0] && previewItems[0].imageUrl) {
+            heroImg.src = previewItems[0].imageUrl;
+          }
+        }
+      }
+    }
+
+    /**
+     * ส่งบรอดแคสต์รอบสั่งอาหารผ่าน LINE Messaging API
+     */
+    async function broadcastRoundViaLine() {
+      const isConnected = dashboardData.settings && dashboardData.settings.isLineConnected;
+      if (!isConnected) {
+        const toSettings = await Swal.fire({
+          icon: 'warning',
+          title: 'ยังไม่ได้เชื่อมต่อ LINE OA',
+          html: 'กรุณาระบุ <b>LINE Channel Access Token</b> ในแท็บ "LINE OA & ตั้งค่า" ก่อนใช้งานบรอดแคสต์ค่ะ',
+          showCancelButton: true,
+          confirmButtonText: 'ไปหน้าตั้งค่า LINE',
+          cancelButtonText: 'ปิด',
+          confirmButtonColor: '#06C755'
+        });
+        if (toSettings.isConfirmed) {
+          switchTab('settingsTab');
+        }
+        return;
+      }
+
+      const roundTitle = (document.getElementById('roundInput').value || dashboardData.currentRound || "รอบปกติ").trim();
+      const notice = (document.getElementById('roundNoticeInput').value || "").trim();
+
+      const confirmSend = await Swal.fire({
+        title: 'ยืนยันการบรอดแคสต์?',
+        html: `ระบบจะส่งการ์ดรอบ <b>${escapeHtml(roundTitle)}</b> ไปยังผู้ติดตามทุกคนใน LINE OA<br><small style="color:#DC2626;">(ข้อความบรอดแคสต์จะถูกนับในโควต้าข้อความฟรี 500 ข้อความ/เดือน)</small>`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '📢 ส่งบรอดแคสต์เลย',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#06C755',
+        cancelButtonColor: '#94A3B8'
+      });
+
+      if (!confirmSend.isConfirmed) return;
+
+      Swal.fire({
+        title: 'กำลังส่งบรอดแคสต์...',
+        text: 'ระบบกำลังส่ง Flex Message ผ่าน LINE Messaging API',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+
+      try {
+        const res = await postAdminAction({
+          action: "broadcastRound",
+          roundTitle: roundTitle,
+          notice: notice
+        });
+
+        Swal.fire({
+          icon: 'success',
+          title: 'บรอดแคสต์สำเร็จ!',
+          text: res.message || 'ส่งการ์ดแจ้งเปิดรอบไปยัง LINE OA เรียบร้อยแล้ว',
+          confirmButtonColor: '#06C755'
+        });
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาด',
+          text: err.message || 'ไม่สามารถส่งบรอดแคสต์ได้ โปรดตรวจสอบ Token ของคุณ',
+          confirmButtonColor: '#06C755'
+        });
+      }
+    }
+
+    /**
+     * แชร์การ์ดรอบสั่งอาหารเข้ากลุ่ม LINE ผ่าน LIFF Share Target Picker (ฟรี 100%)
+     */
+    async function shareRoundViaLiff() {
+      const roundTitle = (document.getElementById('roundInput').value || dashboardData.currentRound || "รอบปกติ").trim();
+      const notice = (document.getElementById('roundNoticeInput').value || "").trim();
+
+      // ตรวจสอบความพร้อมของ LIFF Share Target Picker
+      if (typeof liff === "undefined") {
+        Swal.fire({ icon: 'error', title: 'ไม่พบ LINE LIFF SDK', text: 'กรุณาเปิดหน้านี้ผ่านเบราว์เซอร์ปกติหรือแอป LINE' });
+        return;
+      }
+
+      Swal.fire({
+        title: 'กำลังเตรียมการ์ดสำหรับแชร์...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+
+      try {
+        // ดึง Flex Payload จาก Backend
+        const res = await postAdminAction({
+          action: "getRoundFlexPayload",
+          roundTitle: roundTitle,
+          notice: notice
+        });
+
+        const flexMsg = res.flexMessage;
+        Swal.close();
+
+        if (liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
+          const pickerResult = await liff.shareTargetPicker([flexMsg]);
+          if (pickerResult) {
+            Swal.fire({
+              icon: 'success',
+              title: 'แชร์สำเร็จ!',
+              text: 'ส่งการ์ดรอบสั่งอาหารเข้ากลุ่ม LINE เรียบร้อยแล้ว',
+              timer: 2000,
+              showConfirmButton: false
+            });
+          }
+        } else {
+          // หากเบราว์เซอร์ไม่รองรับ Share Target Picker ให้คัดลอกลิงก์
+          const shareUrl = "https://liff.line.me/2011625055-XnlJJcQp";
+          await Swal.fire({
+            icon: 'info',
+            title: 'แชร์ลิงก์สั่งอาหาร',
+            html: `เบราว์เซอร์นี้ไม่รองรับการเปิด Share Target Picker โดยตรง<br>คุณสามารถคัดลอกลิงก์นี้ไปส่งในกลุ่ม LINE ได้เลยค่ะ:<br><br><input value="${shareUrl}" class="swal2-input" readonly onclick="this.select()">`,
+            confirmButtonText: 'คัดลอกลิงก์',
+            confirmButtonColor: '#06C755'
+          });
+          copyText(shareUrl, 'คัดลอกลิงก์สั่งอาหารเรียบร้อยแล้ว');
+        }
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'ไม่สามารถแชร์ได้',
+          text: err.message || 'เกิดข้อผิดพลาดในการเรียกใช้งาน LINE Share'
+        });
+      }
+    }
+
+    /**
+     * เรนเดอร์ข้อมูลแท็บการตั้งค่าระบบ (settingsTab)
+     */
+    function renderSettingsTab() {
+      const settings = dashboardData.settings || {};
+      const isConnected = !!settings.isLineConnected;
+
+      // Badge สถานะ
+      const badge = document.getElementById('settingsLineStatusBadge');
+      if (badge) {
+        badge.className = isConnected ? "badge-line-connected" : "badge-line-disconnected";
+        badge.innerHTML = isConnected 
+          ? '<i class="fa-solid fa-circle-check"></i> เชื่อมต่อแล้ว (Connected)' 
+          : '<i class="fa-solid fa-circle-xmark"></i> ยังไม่ระบุ Token';
+      }
+
+      // Input Token
+      const tokenInput = document.getElementById('settingsLineTokenInput');
+      if (tokenInput && !tokenInput.value) {
+        tokenInput.value = settings.lineChannelAccessToken || "";
+      }
+
+      // Webhook URL
+      const webhookDisplay = document.getElementById('webhookUrlDisplay');
+      if (webhookDisplay) {
+        webhookDisplay.innerText = API_URL;
+      }
+
+      // ข้อมูลร้านค้า
+      const ppNum = document.getElementById('settingsPromptPayNumber');
+      if (ppNum && !ppNum.value) ppNum.value = settings.promptPayNumber || "";
+
+      const ppName = document.getElementById('settingsPromptPayName');
+      if (ppName && !ppName.value) ppName.value = settings.promptPayName || "";
+
+      const phone = document.getElementById('settingsShopPhone');
+      if (phone && !phone.value) phone.value = settings.shopPhone || "";
+
+      const notice = document.getElementById('settingsShopNotice');
+      if (notice && !notice.value) notice.value = settings.shopNotice || "";
+    }
+
+    function toggleTokenVisibility() {
+      const input = document.getElementById('settingsLineTokenInput');
+      const icon = document.getElementById('tokenEyeIcon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fa-regular fa-eye-slash';
+      } else {
+        input.type = 'password';
+        icon.className = 'fa-regular fa-eye';
+      }
+    }
+
+    function copyWebhookUrl() {
+      copyText(API_URL, 'คัดลอก Webhook URL เรียบร้อยแล้ว นำไปวางใน LINE Developers Console ได้เลยค่ะ');
+    }
+
+    /**
+     * บันทึก LINE Channel Access Token
+     */
+    async function saveLineTokenSetting() {
+      const token = document.getElementById('settingsLineTokenInput').value.trim();
+      if (!token) {
+        Swal.fire({ icon: 'warning', title: 'กรุณาระบุ Token', text: 'โปรดวาง Channel Access Token จาก LINE Developers Console' });
+        return;
+      }
+
+      Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      try {
+        await postAdminAction({
+          action: "saveSettings",
+          settings: {
+            LineChannelAccessToken: token
+          }
+        });
+        Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'บันทึก Channel Access Token เรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
+        await loadDashboardData();
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
+      }
+    }
+
+    /**
+     * บันทึกข้อมูลร้านค้า (PromptPay, เบอร์โทร, Notice)
+     */
+    async function saveShopSettings() {
+      const ppNum = document.getElementById('settingsPromptPayNumber').value.trim();
+      const ppName = document.getElementById('settingsPromptPayName').value.trim();
+      const phone = document.getElementById('settingsShopPhone').value.trim();
+      const notice = document.getElementById('settingsShopNotice').value.trim();
+
+      Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      try {
+        await postAdminAction({
+          action: "saveSettings",
+          settings: {
+            PromptPayNumber: ppNum,
+            PromptPayName: ppName,
+            ShopPhone: phone,
+            ShopNotice: notice
+          }
+        });
+        Swal.fire({ icon: 'success', title: 'สำเร็จ', text: 'บันทึกข้อมูลร้านค้าเรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
+        await loadDashboardData();
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
+      }
+    }
+
+    /**
+     * ทดสอบส่งข้อความ Push Message เข้า LINE ของแอดมิน
+     */
+    async function testLinePushMessage() {
+      if (!dashboardData.settings || !dashboardData.settings.isLineConnected) {
+        Swal.fire({ icon: 'warning', title: 'ยังไม่มี Token', text: 'กรุณาระบุและบันทึก Channel Access Token ก่อนทดสอบค่ะ' });
+        return;
+      }
+
+      Swal.fire({
+        title: 'กำลังส่งข้อความทดสอบ...',
+        text: 'ระบบกำลังส่งข้อความผ่าน LINE Messaging API เข้า LINE บัญชีของคุณ',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        const res = await postAdminAction({
+          action: "testLineMessage",
+          targetUserId: currentAdmin.userId
+        });
+        Swal.fire({
+          icon: 'success',
+          title: 'ส่งสำเร็จ!',
+          text: res.message || 'โปรดตรวจสอบห้องแชท LINE OA ของคุณ จะได้รับข้อความทดสอบค่ะ',
+          confirmButtonColor: '#06C755'
+        });
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'ส่งไม่สำเร็จ',
+          text: err.message || 'โปรดตรวจสอบว่า Token ถูกต้องและได้เพิ่มเพื่อน LINE OA ไว้แล้วหรือไม่',
+          confirmButtonColor: '#06C755'
+        });
       }
     }
 
