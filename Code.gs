@@ -16,7 +16,7 @@ const SPREADSHEET_ID = "1J8l2VuxcboTZ3NSInfiKEvuBBbtzijvSHUkivbKb8yo";
 const DRIVE_FOLDER_ID = "1YjjeCt3Vm2GzSIqpnxsHhhqhZeExj9oR";
 
 // 3. กำหนดค่าเริ่มต้น LINE Messaging API (สามารถตั้งค่าในชีท 'Settings' หรือหน้า Admin ได้เช่นกัน)
-const DEFAULT_LINE_CHANNEL_ACCESS_TOKEN = "";
+const DEFAULT_LINE_CHANNEL_ACCESS_TOKEN = "DDl3V708kDrN/M7wBTU9/ZkHfNb3wIz5XCWdw1lzxILnCANz+HYJXZTtOeL6XOccOntduTHGMbDNH4OhzLvXhekFG13tbO5o4cAw+gPMVecWKBV7SKfcOazPnf7UaM6EBBdO8m76BG/7CdmsQiw61wdB04t89/1O/w1cDnyilFU=";
 const LIFF_ORDER_URL = "https://liff.line.me/2011625055-XnlJJcQp";
 
 /**
@@ -70,13 +70,24 @@ function setSettingValue(ss, keyName, value) {
   }
   const data = settingsSheet.getDataRange().getValues();
   const searchKey = String(keyName).trim().toLowerCase();
+  const isRoundKey = (searchKey === "currentround" || searchKey === "รอบปัจจุบัน");
+
+  let found = false;
   for (let i = 0; i < data.length; i++) {
-    if (String(data[i][0]).trim().toLowerCase() === searchKey) {
+    const rowKey = String(data[i][0] || "").trim().toLowerCase();
+    const isMatch = isRoundKey
+      ? (rowKey === "currentround" || rowKey === "รอบปัจจุบัน")
+      : (rowKey === searchKey);
+
+    if (isMatch) {
       settingsSheet.getRange(i + 1, 2).setValue(value);
-      return;
+      found = true;
     }
   }
-  settingsSheet.appendRow([keyName, value]);
+
+  if (!found) {
+    settingsSheet.appendRow([keyName, value]);
+  }
 }
 
 /**
@@ -105,13 +116,15 @@ function getCurrentRound(ss) {
   const settingsSheet = ss.getSheetByName("Settings");
   if (settingsSheet) {
     const sData = settingsSheet.getDataRange().getValues();
+    let roundVal = "";
     for (let i = 0; i < sData.length; i++) {
-      const key = String(sData[i][0]).trim().toLowerCase();
+      const key = String(sData[i][0] || "").trim().toLowerCase();
       if (key === "currentround" || key === "รอบปัจจุบัน") {
-        const val = String(sData[i][1]).trim();
-        if (val) return val;
+        const val = String(sData[i][1] || "").trim();
+        if (val) roundVal = val;
       }
     }
+    if (roundVal) return roundVal;
   }
   return "รอบปกติ";
 }
@@ -625,31 +638,42 @@ function buildRoundAnnouncementFlex(roundTitle, notice, menus, liffUrl) {
 /**
  * สร้าง Flex Message แจ้งเตือนสถานะอาหาร (Status Transition)
  */
-function buildOrderStatusFlex(round, menuName, quantity, newStatus, customerName) {
+function buildOrderStatusFlex(round, menuName, quantity, newStatus, customerName, liffUrl) {
+  const url = liffUrl || LIFF_ORDER_URL;
+  const s = String(newStatus || "").trim().toLowerCase();
+
   let headerColor = "#059669";
   let title = "🔔 อาหารของคุณพร้อมแล้ว!";
   let subtitle = "อาหารปรุงเสร็จเรียบร้อยแล้วค่ะ";
   let statusBadge = "✅ พร้อมรับประทาน / เสร็จสิ้น";
   let statusBadgeBg = "#DCFCE7";
   let statusBadgeColor = "#166534";
-  let desc = "รายการ " + menuName + " (จำนวน " + quantity + " กล่อง) ปรุงเสร็จแล้ว สามารถมารับได้ที่จุดรับอาหารได้เลยนะคะ 😋";
+  let desc = "รายการ " + menuName + " (จำนวน " + quantity + " กล่อง) ปรุงเสร็จเรียบร้อยแล้ว สามารถมารับได้ที่จุดรับอาหารได้เลยนะคะ 😋🍽️";
 
-  if (newStatus === "Cooking" || newStatus === "กำลังทำ") {
+  if (s === "cooking" || s === "กำลังทำ" || s === "กำลังปรุง") {
     headerColor = "#D97706";
-    title = "🍳 แม่ครัวกำลังปรุงอาหาร...";
-    subtitle = "กำลังจัดเตรียมอาหารของคุณอย่างพิถีพิถัน";
+    title = "🍳 กำลังปรุงอาหาร...";
+    subtitle = "แม่ครัวกำลังจัดเตรียมอาหารของคุณ";
     statusBadge = "🔥 กำลังปรุงอาหาร";
     statusBadgeBg = "#FEF3C7";
     statusBadgeColor = "#B45309";
-    desc = "แม่ครัวเริ่มลงมือปรุง " + menuName + " ให้แล้วนะคะ รอสักครู่ จะแจ้งเตือนทันทีเมื่อเสร็จค่ะ";
-  } else if (newStatus === "Cancelled" || newStatus === "ยกเลิก") {
+    desc = "แม่ครัวเริ่มลงมือปรุง " + menuName + " (จำนวน " + quantity + " กล่อง) ให้แล้วนะคะ รอสักครู่ เมื่อเสร็จแล้วระบบจะแจ้งเตือนทันทีค่ะ 🍳✨";
+  } else if (s === "cancelled" || s === "ยกเลิก") {
     headerColor = "#DC2626";
     title = "❌ แจ้งเตือน: ออเดอร์ถูกยกเลิก";
     subtitle = "ขออภัยในความไม่สะดวก";
     statusBadge = "🚫 ยกเลิกรายการ";
     statusBadgeBg = "#FEE2E2";
     statusBadgeColor = "#991B1B";
-    desc = "รายการ " + menuName + " ของคุณถูกยกเลิก หากมีข้อสงสัยโปรดสอบถามผ่านแชทนี้ค่ะ";
+    desc = "รายการ " + menuName + " ของคุณถูกยกเลิก หากมีข้อสงสัยสามารถติดต่อทางร้านผ่านแชทนี้ได้เลยนะคะ 🙏";
+  } else if (s === "pending" || s === "รอดำเนินการ") {
+    headerColor = "#2563EB";
+    title = "📋 รับออเดอร์แล้ว เข้าคิวในครัว";
+    subtitle = "รายการอาหารเข้าสู่คิวรอทำเรียบร้อย";
+    statusBadge = "⏳ รอดำเนินการ";
+    statusBadgeBg = "#DBEAFE";
+    statusBadgeColor = "#1E40AF";
+    desc = "รายการ " + menuName + " (จำนวน " + quantity + " กล่อง) ได้รับคำสั่งซื้อแล้ว รอแม่ครัวจัดเตรียมตามคิวค่ะ ✨";
   }
 
   return {
@@ -695,6 +719,32 @@ function buildOrderStatusFlex(round, menuName, quantity, newStatus, customerName
           },
           { "type": "separator", "color": "#E2E8F0" },
           { "type": "text", "text": desc, "size": "xs", "color": "#475569", "wrap": true }
+        ]
+      },
+      "footer": {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "xs",
+        "contents": [
+          {
+            "type": "button",
+            "action": {
+              "type": "uri",
+              "label": "🍽️ เปิดดูรายการ / สั่งอาหารเพิ่ม",
+              "uri": url
+            },
+            "style": "primary",
+            "color": headerColor,
+            "height": "sm"
+          },
+          {
+            "type": "text",
+            "text": "หากมีข้อสอบถาม สามารถพิมพ์คุยในแชทนี้ได้เลยนะคะ 😊",
+            "size": "xxs",
+            "color": "#94A3B8",
+            "align": "center",
+            "margin": "xs"
+          }
         ]
       }
     }
@@ -1272,12 +1322,86 @@ function doPost(e) {
       }
     }
 
-    // 1. อัปเดตรอบสั่งอาหาร (updateRound)
+    // 1. กำหนดหน้าสั่งอาหารประจำวัน (updateSchedule: รอบ, วันที่, เมนูเปิดขาย)
+    if (action === "updateSchedule") {
+      const roundTitle = String(payload.roundTitle || payload.newRound || "").trim();
+      if (!roundTitle) {
+        throw new Error("กรุณาระบุชื่อรอบสั่งอาหาร");
+      }
+
+      // บันทึกชื่อรอบลงในชีท Settings (บันทึกทั้ง 2 คีย์เพื่อความเข้ากันได้)
+      setSettingValue(ss, "CurrentRound", roundTitle);
+      setSettingValue(ss, "รอบปัจจุบัน", roundTitle);
+
+      // บันทึกวันที่เลือก (ถ้ามี)
+      if (payload.selectedDate) {
+        setSettingValue(ss, "SelectedDate", String(payload.selectedDate).trim());
+        setSettingValue(ss, "วันที่เลือก", String(payload.selectedDate).trim());
+      }
+
+      // ปรับสถานะเปิดขาย / ปิดขาย ในชีท Menu ตาม menuStatusMap
+      const menuStatusMap = payload.menuStatusMap || {};
+      const menuSheet = ss.getSheetByName("Menu") || ss.getSheets()[0];
+      let updatedMenuCount = 0;
+
+      if (menuSheet && Object.keys(menuStatusMap).length > 0) {
+        const lastRow = menuSheet.getLastRow();
+        if (lastRow >= 2) {
+          const statusRange = menuSheet.getRange(2, 3, lastRow - 1, 1);
+          const currentStatuses = statusRange.getValues();
+          let modified = false;
+
+          for (let r = 2; r <= lastRow; r++) {
+            const isChecked = (menuStatusMap[r] !== undefined)
+              ? !!menuStatusMap[r]
+              : ((menuStatusMap[String(r)] !== undefined) ? !!menuStatusMap[String(r)] : null);
+
+            if (isChecked !== null) {
+              const newStatus = isChecked ? "Available" : "Sold Out";
+              if (currentStatuses[r - 2][0] !== newStatus) {
+                currentStatuses[r - 2][0] = newStatus;
+                modified = true;
+                updatedMenuCount++;
+              }
+            }
+          }
+
+          if (modified) {
+            statusRange.setValues(currentStatuses);
+          }
+        }
+      }
+
+      // ล้าง Cache ทั้งหมดทันที
+      try {
+        const scriptCache = CacheService.getScriptCache();
+        scriptCache.remove("appData_fast_cache");
+        scriptCache.remove("admin_dash_cache");
+      } catch (cErr) {}
+
+      return jsonResponse({
+        status: "success",
+        message: `ตั้งค่ารอบ "${roundTitle}" และเมนูเปิดขายเรียบร้อยแล้ว`,
+        roundTitle: roundTitle,
+        currentRound: roundTitle,
+        updatedMenuCount: updatedMenuCount
+      });
+    }
+
+    // 1.1 อัปเดตรอบสั่งอาหารแบบด่วน (updateRound)
     if (action === "updateRound") {
-      const newRound = String(payload.newRound || "").trim();
+      const newRound = String(payload.newRound || payload.roundTitle || "").trim();
       if (!newRound) throw new Error("กรุณาระบุชื่อรอบ");
       setSettingValue(ss, "CurrentRound", newRound);
-      return jsonResponse({ status: "success", message: "อัปเดตรอบสั่งอาหารสำเร็จ", newRound });
+      setSettingValue(ss, "รอบปัจจุบัน", newRound);
+
+      try {
+        const scriptCache = CacheService.getScriptCache();
+        scriptCache.remove("appData_fast_cache");
+        scriptCache.remove("admin_dash_cache");
+      } catch (cErr) {}
+
+      return jsonResponse({ status: "success", message: "อัปเดตรอบสั่งอาหารสำเร็จ", newRound: newRound, currentRound: newRound });
     }
 
     // 2. บรอดแคสต์เปิดรอบผ่าน LINE Messaging API (broadcastRound)
@@ -1371,37 +1495,55 @@ function doPost(e) {
     if (action === "updateOrderStatus") {
       const rowIndex = parseInt(payload.rowIndex, 10);
       const newStatus = payload.newStatus || "Completed";
-      const notifyCustomer = payload.notifyCustomer === true;
+      // ส่งแจ้งเตือน LINE อัตโนมัติ (นอกจากผู้ใช้จะปิดอย่างชัดเจน)
+      const notifyCustomer = (payload.notifyCustomer !== false && payload.notifyCustomer !== "false");
       const orderSheet = ss.getSheetByName("Orders");
 
       if (rowIndex > 1 && orderSheet) {
         orderSheet.getRange(rowIndex, 8).setValue(newStatus);
 
         let notified = false;
+        let notifyError = "";
         if (notifyCustomer) {
           try {
             const rowData = orderSheet.getRange(rowIndex, 1, 1, 12).getValues()[0];
-            const oRound = rowData[1];
-            const oUserId = rowData[2];
-            const oName = rowData[3];
-            const oMenu = rowData[4];
-            const oQty = rowData[5];
+            const oRound = String(rowData[1] || "-");
+            const oUserId = String(rowData[2] || "").trim();
+            const oName = String(rowData[3] || "ลูกค้า");
+            const oMenu = String(rowData[4] || "อาหาร");
+            const oQty = parseInt(rowData[5], 10) || 1;
 
             const token = getLineChannelAccessToken(ss);
-            if (token && oUserId && String(oUserId).startsWith("U")) {
-              const statusFlex = buildOrderStatusFlex(oRound, oMenu, oQty, newStatus, oName);
+            const liffUrl = getSettingValue(ss, "LiffUrl", LIFF_ORDER_URL);
+
+            if (token && oUserId && oUserId.startsWith("U")) {
+              const statusFlex = buildOrderStatusFlex(oRound, oMenu, oQty, newStatus, oName, liffUrl);
               const pushRes = sendLinePush(token, oUserId, [statusFlex]);
               notified = pushRes.success;
+              if (!pushRes.success) {
+                notifyError = pushRes.error || "LINE API push failed";
+              }
+            } else {
+              notifyError = (!token) ? "ยังไม่มี LINE Channel Access Token" : "User ID ไม่ใช่ LINE User ID (" + oUserId + ")";
             }
           } catch (nErr) {
             console.warn("Notify customer failed: " + nErr.message);
+            notifyError = nErr.message;
           }
         }
 
+        // ล้าง Cache เพื่อให้หน้าจอ Admin รีเฟรชได้ข้อมูลล่าสุดทันที
+        try {
+          const scriptCache = CacheService.getScriptCache();
+          scriptCache.remove("appData_fast_cache");
+          scriptCache.remove("admin_dash_cache");
+        } catch (cErr) {}
+
         return jsonResponse({
           status: "success",
-          message: `อัปเดตสถานะเป็น ${newStatus} แล้ว` + (notified ? " (ส่งแจ้งเตือนใน LINE เรียบร้อย)" : ""),
-          notified: notified
+          message: `อัปเดตสถานะเป็น "${newStatus}" แล้ว` + (notified ? " (ส่งแจ้งเตือนเข้า LINE เรียบร้อย 📲)" : ""),
+          notified: notified,
+          notifyError: notifyError
         });
       }
       throw new Error("ไม่พบแถวออเดอร์ที่ต้องการอัปเดต");

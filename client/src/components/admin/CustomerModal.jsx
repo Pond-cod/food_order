@@ -2,7 +2,7 @@ import React from 'react';
 import { formatDisplayDate } from '../../utils/formatters';
 import { DEFAULT_AVATAR } from '../../utils/assets';
 
-export default function CustomerModal({ order, onClose }) {
+export default function CustomerModal({ order, onClose, onUpdateStatus }) {
   if (!order) return null;
 
   function copyText(text) {
@@ -12,6 +12,15 @@ export default function CustomerModal({ order, onClose }) {
   }
 
   const hasPhone = order.phone && order.phone !== '-' && order.phone.trim() !== '';
+
+  const handleStatusChange = (newStatus) => {
+    if (typeof onUpdateStatus === 'function') {
+      onUpdateStatus(order.rowIndex, newStatus, true);
+    }
+    if (onClose) onClose();
+  };
+
+  const currentStatus = String(order.status || '').toLowerCase();
 
   return (
     <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.65)', zIndex: 1055 }}>
@@ -101,7 +110,7 @@ export default function CustomerModal({ order, onClose }) {
             </div>
 
             {/* Order Details in this Round */}
-            <div className="p-3 bg-light rounded-3 border">
+            <div className="p-3 bg-light rounded-3 border mb-3">
               <div className="fw-bold text-dark mb-2 d-flex align-items-center gap-2" style={{ fontSize: '13px' }}>
                 <i className="fa-solid fa-utensils text-success"></i>
                 <span>รายละเอียดออเดอร์ในรอบนี้</span>
@@ -112,6 +121,47 @@ export default function CustomerModal({ order, onClose }) {
                 <div className="col-6"><b>รอบ:</b> {order.round}</div>
                 <div className="col-6"><b>เวลาสั่ง:</b> {formatDisplayDate(order.timestamp)}</div>
                 <div className="col-12"><b>หมายเหตุ:</b> {order.note || '-'}</div>
+              </div>
+            </div>
+
+            {/* Quick Status Actions Box */}
+            <div className="p-3 bg-white rounded-3 border">
+              <div className="fw-bold text-dark mb-2 d-flex align-items-center justify-content-between" style={{ fontSize: '12.5px' }}>
+                <span className="d-flex align-items-center gap-1">
+                  <i className="fa-brands fa-line text-success"></i>
+                  <span>เปลี่ยนสถานะ (ส่งแจ้งเตือนเข้า LINE ทันที):</span>
+                </span>
+                <span className="badge bg-secondary rounded-pill px-2">{order.status || 'Pending'}</span>
+              </div>
+              <div className="d-flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className={`btn btn-sm flex-fill ${currentStatus === 'pending' || currentStatus === 'รอดำเนินการ' ? 'btn-primary' : 'btn-outline-primary'}`}
+                  onClick={() => handleStatusChange('Pending')}
+                >
+                  <i className="fa-solid fa-clock me-1"></i>รอดำเนินการ
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm flex-fill ${currentStatus === 'cooking' || currentStatus === 'กำลังปรุง' ? 'btn-warning text-dark fw-bold' : 'btn-outline-warning text-dark'}`}
+                  onClick={() => handleStatusChange('Cooking')}
+                >
+                  <i className="fa-solid fa-fire me-1"></i>กำลังปรุง
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm flex-fill ${currentStatus === 'completed' || currentStatus === 'เสร็จสิ้น' ? 'btn-success fw-bold' : 'btn-outline-success'}`}
+                  onClick={() => handleStatusChange('Completed')}
+                >
+                  <i className="fa-solid fa-check me-1"></i>เสร็จสิ้น/ส่งแล้ว
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm flex-fill ${currentStatus === 'cancelled' || currentStatus === 'ยกเลิก' ? 'btn-danger' : 'btn-outline-danger'}`}
+                  onClick={() => handleStatusChange('Cancelled')}
+                >
+                  <i className="fa-solid fa-xmark me-1"></i>ยกเลิก
+                </button>
               </div>
             </div>
           </div>

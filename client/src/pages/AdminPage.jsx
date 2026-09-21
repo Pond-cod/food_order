@@ -266,7 +266,7 @@ export default function AdminPage({ onNavigateOrder }) {
   // ========================================================
   // 3. Feature: ออเดอร์ & ครัว (Kitchen & Orders)
   // ========================================================
-  async function handleUpdateOrderStatus(rowIndex, newStatus) {
+  async function handleUpdateOrderStatus(rowIndex, newStatus, notifyCustomer = true) {
     setDashboardData((prev) => {
       if (!prev) return prev;
       const updated = prev.orders.map((o) =>
@@ -276,7 +276,30 @@ export default function AdminPage({ onNavigateOrder }) {
     });
 
     try {
-      await updateOrderStatus(rowIndex, newStatus);
+      const res = await updateOrderStatus(rowIndex, newStatus, notifyCustomer);
+      const isNotified = res && res.notified;
+
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      });
+
+      const labelMap = {
+        Cooking: 'กำลังปรุงอาหาร 🍳',
+        Completed: 'เสร็จสิ้น / ส่งแล้ว ✅',
+        Cancelled: 'ยกเลิกออเดอร์ ❌',
+        Pending: 'รอดำเนินการ ⏳',
+      };
+      const displayStatus = labelMap[newStatus] || newStatus;
+
+      Toast.fire({
+        icon: 'success',
+        title: `อัปเดตเป็น "${displayStatus}" แล้ว`,
+        text: isNotified ? '📲 ส่งแจ้งเตือน Flex Card เข้า LINE ลูกค้าเรียบร้อย' : 'บันทึกลงระบบเรียบร้อยแล้ว',
+      });
     } catch (err) {
       Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: err.message });
       await loadDashboard();
@@ -506,6 +529,7 @@ export default function AdminPage({ onNavigateOrder }) {
       <CustomerModal
         order={activeCustomerOrder}
         onClose={() => setActiveCustomerOrder(null)}
+        onUpdateStatus={handleUpdateOrderStatus}
       />
 
       {/* Image Preview Modal */}

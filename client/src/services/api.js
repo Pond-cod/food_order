@@ -112,7 +112,11 @@ export async function callDirectGas(endpoint, options = {}) {
       const res = await fetch(url, { signal: controller.signal });
       clearTimeout(timeoutId);
       if (!res.ok) throw new Error(`GAS Direct HTTP Error: ${res.status}`);
-      return await res.json();
+      const data = await res.json();
+      if (data && data.status === 'error') {
+        throw new Error(data.message || 'เกิดข้อผิดพลาดในการดึงข้อมูล');
+      }
+      return data;
     } else {
       const reqPayload = {
         action,
@@ -132,7 +136,11 @@ export async function callDirectGas(endpoint, options = {}) {
       clearTimeout(timeoutId);
 
       if (!res.ok) throw new Error(`GAS Direct HTTP Error: ${res.status}`);
-      return await res.json();
+      const data = await res.json();
+      if (data && data.status === 'error') {
+        throw new Error(data.message || 'เกิดข้อผิดพลาดในการประมวลผลคำสั่ง');
+      }
+      return data;
     }
   } catch (err) {
     clearTimeout(timeoutId);

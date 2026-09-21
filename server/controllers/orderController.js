@@ -40,14 +40,14 @@ async function placeOrder(req, res, next) {
 async function updateStatus(req, res, next) {
   try {
     const rowIndex = parseInt(req.params.rowIndex, 10);
-    const { newStatus } = req.body;
+    const { newStatus, notifyCustomer = true } = req.body;
     const { userId, displayName } = req.adminUser;
 
     if (!rowIndex || !newStatus) {
       return res.status(400).json({ status: 'error', message: 'ข้อมูลไม่ครบถ้วน' });
     }
 
-    const result = await sheetService.updateOrderStatus(rowIndex, newStatus, userId, displayName);
+    const result = await sheetService.updateOrderStatus(rowIndex, newStatus, notifyCustomer, userId, displayName);
     res.json(result);
   } catch (err) {
     next(err);

@@ -54,12 +54,12 @@ export async function updateRound(newRound) {
 }
 
 /**
- * อัปเดตสถานะออเดอร์ (Completed / Cancelled)
+ * อัปเดตสถานะออเดอร์ (Pending / Cooking / Completed / Cancelled) พร้อมส่งแจ้งเตือนเข้า LINE
  */
-export async function updateOrderStatus(rowIndex, newStatus) {
+export async function updateOrderStatus(rowIndex, newStatus, notifyCustomer = true) {
   return await apiRequest(`/admin/orders/${rowIndex}`, {
     method: 'PATCH',
-    body: JSON.stringify({ newStatus }),
+    body: JSON.stringify({ newStatus, notifyCustomer }),
   });
 }
 

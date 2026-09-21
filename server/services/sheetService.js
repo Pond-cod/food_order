@@ -42,7 +42,11 @@ async function callGasApi(payload, method = 'POST', queryParams = '') {
   if (!res.ok) {
     throw new Error(`GAS API HTTP Error: ${res.status}`);
   }
-  return await res.json();
+  const data = await res.json();
+  if (data && data.status === 'error') {
+    throw new Error(data.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ GAS');
+  }
+  return data;
 }
 
 /**
@@ -238,12 +242,13 @@ async function deleteMenu(rowIndex, adminUserId, adminDisplayName) {
 /**
  * อัปเดตสถานะออเดอร์ (Admin)
  */
-async function updateOrderStatus(rowIndex, newStatus, adminUserId, adminDisplayName) {
+async function updateOrderStatus(rowIndex, newStatus, notifyCustomer = true, adminUserId, adminDisplayName) {
   clearCache();
   const payload = {
     action: 'updateOrderStatus',
     rowIndex,
     newStatus,
+    notifyCustomer,
     adminUserId,
     adminDisplayName,
   };

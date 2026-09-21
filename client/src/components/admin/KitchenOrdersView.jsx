@@ -1,19 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import Swal from 'sweetalert2';
 import KitchenSummary from './KitchenSummary';
 import { DEFAULT_AVATAR } from '../../utils/assets';
 
 /**
- * แปลง timestamp string หลายรูปแบบให้เป็น HH:MM (BUG-05 Fix)
+ * แปลง timestamp string หลายรูปแบบให้เป็น HH:MM
  */
 function formatTimestamp(raw) {
   if (!raw) return '-';
   try {
     const str = String(raw).trim();
-    // standard GAS format: "2024-09-18 14:30:00"
     if (str.length >= 16 && str[10] === ' ') {
       return str.substring(11, 16);
     }
-    // ISO format with T
     if (str.includes('T')) {
       const d = new Date(str);
       if (!isNaN(d)) {
@@ -45,6 +44,41 @@ function formatDateShort(raw) {
   } catch (e) { return ''; }
 }
 
+/**
+ * แปลงสถานะให้อยู่ในมาตรฐานเดียวกัน
+ */
+function normalizeStatus(status) {
+  const s = String(status || '').trim().toLowerCase();
+  if (s === 'cooking' || s === 'กำลังปรุง' || s === 'กำลังทำ') return 'Cooking';
+  if (s === 'completed' || s === 'delivered' || s === 'เสร็จสิ้น' || s === 'ส่งแล้ว' || s === 'พร้อมรับ') return 'Completed';
+  if (s === 'cancelled' || s === 'ยกเลิก') return 'Cancelled';
+  return 'Pending';
+}
+
+function getStatusBadgeClass(status) {
+  const norm = normalizeStatus(status);
+  if (norm === 'Completed') return 'btn-success text-white border-success';
+  if (norm === 'Cooking') return 'btn-warning text-dark border-warning';
+  if (norm === 'Cancelled') return 'btn-danger text-white border-danger';
+  return 'btn-primary text-white border-primary';
+}
+
+function getStatusLabel(status) {
+  const norm = normalizeStatus(status);
+  if (norm === 'Completed') return 'เสร็จสิ้น / ส่งแล้ว';
+  if (norm === 'Cooking') return 'กำลังปรุง';
+  if (norm === 'Cancelled') return 'ยกเลิก';
+  return 'รอดำเนินการ';
+}
+
+function getStatusIcon(status) {
+  const norm = normalizeStatus(status);
+  if (norm === 'Completed') return <i className="fa-solid fa-check me-1"></i>;
+  if (norm === 'Cooking') return <i className="fa-solid fa-fire me-1"></i>;
+  if (norm === 'Cancelled') return <i className="fa-solid fa-xmark me-1"></i>;
+  return <i className="fa-solid fa-clock me-1"></i>;
+}
+
 const AUTO_REFRESH_SECONDS = 60;
 
 export default function KitchenOrdersView({
@@ -59,12 +93,18 @@ export default function KitchenOrdersView({
 }) {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
-  // UX-06: track which order row is saving
   const [savingRowIndex, setSavingRowIndex] = useState(null);
-  // UX-05: auto-refresh countdown
   const [countdown, setCountdown] = useState(AUTO_REFRESH_SECONDS);
+  const [openStatusMenuRow, setOpenStatusMenuRow] = useState(null);
 
-  // UX-05: Auto-refresh ทุก 60 วินาที
+  // ปิด Dropdown เมนูเมื่อคลิกพื้นที่อื่น
+  useEffect(() => {
+    const handleGlobalClick = () => setOpenStatusMenuRow(null);
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, []);
+
+  // Auto-refresh ทุก 60 วินาที
   useEffect(() => {
     const interval = setInterval(() => {
       setCountdown((prev) => {
@@ -83,34 +123,46 @@ export default function KitchenOrdersView({
     if (typeof onRefresh === 'function') onRefresh();
   }, [onRefresh]);
 
-  // UX-06: loading state บนปุ่มสถานะ
+  // ฟังก์ชันอัปเดตสถานะ (ส่งแจ้งเตือนเข้า LINE อัตโนมัติ)
   const handleUpdateStatus = useCallback(async (rowIndex, newStatus) => {
+    setOpenStatusMenuRow(null);
     setSavingRowIndex(rowIndex);
     try {
-      await onUpdateStatus(rowIndex, newStatus);
+      await onUpdateStatus(rowIndex, newStatus, true);
     } finally {
       setSavingRowIndex(null);
     }
   }, [onUpdateStatus]);
 
-  const pendingCount = orders.filter((o) => (o.status || '').toLowerCase() === 'pending' || o.status === 'รอดำเนินการ').length;
-  const cookingCount = orders.filter((o) => (o.status || '').toLowerCase() === 'cooking' || o.status === 'กำลังปรุง').length;
-  const deliveredCount = orders.filter((o) => (o.status || '').toLowerCase() === 'completed' || (o.status || '').toLowerCase() === 'delivered' || o.status === 'เสร็จสิ้น').length;
+  // กล่องยืนยันกรณียกเลิกออเดอร์
+  const handleConfirmCancel = async (rowIndex, menuName) => {
+    setOpenStatusMenuRow(null);
+    const result = await Swal.fire({
+      title: 'ยืนยันยกเลิกออเดอร์?',
+      text: `ต้องการยกเลิก "${menuName}" และส่งข้อความแจ้งเตือนลูกค้าใน LINE หรือไม่?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'ยืนยันยกเลิก',
+      cancelButtonText: 'ปิด',
+      confirmButtonColor: '#DC2626',
+    });
+    if (result.isConfirmed) {
+      handleUpdateStatus(rowIndex, 'Cancelled');
+    }
+  };
+
+  const pendingCount = orders.filter((o) => normalizeStatus(o.status) === 'Pending').length;
+  const cookingCount = orders.filter((o) => normalizeStatus(o.status) === 'Cooking').length;
+  const deliveredCount = orders.filter((o) => normalizeStatus(o.status) === 'Completed').length;
+  const cancelledCount = orders.filter((o) => normalizeStatus(o.status) === 'Cancelled').length;
 
   const filteredOrders = orders.filter((o) => {
-    if (statusFilter === 'PENDING') {
-      const s = (o.status || '').toLowerCase();
-      if (s !== 'pending' && s !== 'รอดำเนินการ') return false;
-    } else if (statusFilter === 'COOKING') {
-      const s = (o.status || '').toLowerCase();
-      if (s !== 'cooking' && s !== 'กำลังปรุง') return false;
-    } else if (statusFilter === 'COMPLETED') {
-      const s = (o.status || '').toLowerCase();
-      if (s !== 'completed' && s !== 'delivered' && s !== 'เสร็จสิ้น') return false;
-    } else if (statusFilter === 'CANCELLED') {
-      const s = (o.status || '').toLowerCase();
-      if (s !== 'cancelled' && s !== 'ยกเลิก') return false;
-    }
+    const norm = normalizeStatus(o.status);
+    if (statusFilter === 'PENDING' && norm !== 'Pending') return false;
+    if (statusFilter === 'COOKING' && norm !== 'Cooking') return false;
+    if (statusFilter === 'COMPLETED' && norm !== 'Completed') return false;
+    if (statusFilter === 'CANCELLED' && norm !== 'Cancelled') return false;
+
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       return (o.displayName || '').toLowerCase().includes(q) ||
@@ -121,20 +173,6 @@ export default function KitchenOrdersView({
     }
     return true;
   });
-
-  const getStatusBadge = (status) => {
-    const s = (status || '').toLowerCase();
-    if (s === 'completed' || s === 'delivered' || s === 'เสร็จสิ้น') {
-      return <span className="badge bg-success px-2 py-1"><i className="fa-solid fa-check me-1"></i>เสร็จสิ้น / ส่งแล้ว</span>;
-    }
-    if (s === 'cooking' || s === 'กำลังปรุง') {
-      return <span className="badge bg-warning text-dark px-2 py-1"><i className="fa-solid fa-fire me-1"></i>กำลังปรุง</span>;
-    }
-    if (s === 'cancelled' || s === 'ยกเลิก') {
-      return <span className="badge bg-danger px-2 py-1"><i className="fa-solid fa-xmark me-1"></i>ยกเลิก</span>;
-    }
-    return <span className="badge bg-primary px-2 py-1"><i className="fa-solid fa-clock me-1"></i>รอดำเนินการ</span>;
-  };
 
   return (
     <div className="kitchen-orders-container mb-4">
@@ -153,17 +191,21 @@ export default function KitchenOrdersView({
               <span>รายการสั่งซื้อทั้งหมด</span>
               <span className="badge bg-dark rounded-pill px-2">{orders.length} ออเดอร์</span>
             </h5>
-            <small className="text-secondary">
-              คลิกที่แถวหรือปุ่ม <strong>"ดูรายละเอียด"</strong> เพื่อดูข้อมูลผู้สั่ง แผนก และหมายเหตุครบถ้วน
-            </small>
+            <div className="d-flex flex-wrap align-items-center gap-2 mt-1">
+              <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
+                <i className="fa-brands fa-line me-1"></i>ระบบส่งแจ้งเตือนเข้า LINE ลูกค้าอัตโนมัติเมื่อเปลี่ยนสถานะ
+              </span>
+              <small className="text-secondary">
+                คลิกปุ่มสถานะเพื่อเลือกเปลี่ยนได้ทันที
+              </small>
+            </div>
           </div>
 
           <div className="d-flex align-items-center gap-2">
-            {/* UX-05: Countdown timer */}
             <div className="d-flex align-items-center gap-1" style={{ fontSize: '12px', color: '#64748B' }}>
               <i className={`fa-solid fa-rotate ${isLoading ? 'fa-spin text-success' : 'text-secondary'}`} style={{ fontSize: '11px' }}></i>
               <span className="d-none d-sm-inline">
-                {isLoading ? 'กำลังโหลด...' : `รีเฟรชอัตโนมัติใน ${countdown}s`}
+                {isLoading ? 'กำลังโหลด...' : `รีเฟรชใน ${countdown}s`}
               </span>
             </div>
             <button
@@ -195,6 +237,7 @@ export default function KitchenOrdersView({
               { key: 'PENDING', label: `รอดำเนินการ (${pendingCount})`, icon: 'fa-clock', cls: 'btn-primary', inactiveCls: 'btn-light border text-primary' },
               { key: 'COOKING', label: `กำลังปรุง (${cookingCount})`, icon: 'fa-fire', cls: 'btn-warning text-dark', inactiveCls: 'btn-light border text-warning' },
               { key: 'COMPLETED', label: `เสร็จสิ้น (${deliveredCount})`, icon: 'fa-check', cls: 'btn-success', inactiveCls: 'btn-light border text-success' },
+              { key: 'CANCELLED', label: `ยกเลิก (${cancelledCount})`, icon: 'fa-xmark', cls: 'btn-danger', inactiveCls: 'btn-light border text-danger' },
             ].map(({ key, label, icon, cls, inactiveCls }) => (
               <button
                 key={key}
@@ -230,11 +273,11 @@ export default function KitchenOrdersView({
                 <th>เวลาสั่ง</th>
                 <th>ผู้สั่ง / โปรไฟล์</th>
                 <th>เมนูอาหาร</th>
-                <th className="text-center" style={{ width: '70px' }}>จำนวน</th>
+                <th className="text-center" style={{ width: '65px' }}>จำนวน</th>
                 <th>หมายเหตุ</th>
                 <th>แผนก/โต๊ะ</th>
-                <th className="text-center">สถานะ</th>
-                <th className="text-center" style={{ width: '130px' }}>จัดการ</th>
+                <th className="text-center" style={{ minWidth: '150px' }}>สถานะ (คลิกเพื่อเปลี่ยน)</th>
+                <th className="text-center" style={{ minWidth: '170px' }}>จัดการ</th>
               </tr>
             </thead>
             <tbody>
@@ -248,12 +291,15 @@ export default function KitchenOrdersView({
               ) : (
                 filteredOrders.map((order, idx) => {
                   const isSavingThis = savingRowIndex === order.rowIndex;
-                  return (
-                    <tr key={order.rowIndex || idx} style={{ cursor: 'pointer' }}>
-                      <td className="fw-bold text-muted" onClick={() => onViewCustomer(order)}>{idx + 1}</td>
+                  const currentNorm = normalizeStatus(order.status);
+                  const isMenuOpen = openStatusMenuRow === order.rowIndex;
 
-                      {/* Timestamp — BUG-05 Fix */}
-                      <td className="text-nowrap text-muted" onClick={() => onViewCustomer(order)}>
+                  return (
+                    <tr key={order.rowIndex || idx}>
+                      <td className="fw-bold text-muted" onClick={() => onViewCustomer(order)} style={{ cursor: 'pointer' }}>{idx + 1}</td>
+
+                      {/* Timestamp */}
+                      <td className="text-nowrap text-muted" onClick={() => onViewCustomer(order)} style={{ cursor: 'pointer' }}>
                         <span className="fw-semibold text-dark">{formatTimestamp(order.timestamp)}</span>
                         <small className="d-block text-secondary" style={{ fontSize: '10.5px' }}>
                           {formatDateShort(order.timestamp)}{order.round ? ` · ${order.round}` : ''}
@@ -261,7 +307,7 @@ export default function KitchenOrdersView({
                       </td>
 
                       {/* Customer Info */}
-                      <td onClick={() => onViewCustomer(order)}>
+                      <td onClick={() => onViewCustomer(order)} style={{ cursor: 'pointer' }}>
                         <div className="d-flex align-items-center gap-2">
                           <img
                             src={order.pictureUrl || DEFAULT_AVATAR}
@@ -288,17 +334,17 @@ export default function KitchenOrdersView({
                       </td>
 
                       {/* Menu Name */}
-                      <td onClick={() => onViewCustomer(order)}>
+                      <td onClick={() => onViewCustomer(order)} style={{ cursor: 'pointer' }}>
                         <span className="fw-bold text-dark">{order.menuName}</span>
                       </td>
 
                       {/* Quantity */}
-                      <td className="text-center fw-bold fs-6 text-success" onClick={() => onViewCustomer(order)}>
+                      <td className="text-center fw-bold fs-6 text-success" onClick={() => onViewCustomer(order)} style={{ cursor: 'pointer' }}>
                         {order.quantity}
                       </td>
 
                       {/* Note */}
-                      <td onClick={() => onViewCustomer(order)}>
+                      <td onClick={() => onViewCustomer(order)} style={{ cursor: 'pointer' }}>
                         {order.note && order.note !== '-' ? (
                           <span className="badge bg-warning bg-opacity-25 text-dark border border-warning px-2 py-1" style={{ fontSize: '11px' }}>
                             <i className="fa-regular fa-comment-dots me-1"></i>{order.note}
@@ -307,7 +353,7 @@ export default function KitchenOrdersView({
                       </td>
 
                       {/* Department */}
-                      <td className="text-muted text-nowrap" onClick={() => onViewCustomer(order)}>
+                      <td className="text-muted text-nowrap" onClick={() => onViewCustomer(order)} style={{ cursor: 'pointer' }}>
                         {order.department && order.department !== '-' ? (
                           <span className="badge bg-light text-dark border">
                             <i className="fa-solid fa-location-dot me-1 text-danger"></i>
@@ -316,54 +362,175 @@ export default function KitchenOrdersView({
                         ) : '-'}
                       </td>
 
-                      {/* Status */}
-                      <td className="text-center" onClick={() => onViewCustomer(order)}>
-                        {getStatusBadge(order.status)}
+                      {/* Status Dropdown Picker */}
+                      <td className="text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="position-relative d-inline-block">
+                          <button
+                            type="button"
+                            className={`btn btn-sm rounded-pill px-3 py-1 fw-bold shadow-sm d-inline-flex align-items-center gap-1 ${getStatusBadgeClass(order.status)}`}
+                            onClick={() => setOpenStatusMenuRow(isMenuOpen ? null : order.rowIndex)}
+                            disabled={isSavingThis}
+                            style={{ fontSize: '12px', minWidth: '135px', justifyContent: 'center' }}
+                            title="คลิกเพื่อเลือกเปลี่ยนสถานะ (ส่ง LINE แจ้งเตือนลูกค้าทันที)"
+                          >
+                            {isSavingThis ? (
+                              <>
+                                <span className="spinner-border spinner-border-sm me-1" style={{ width: '12px', height: '12px' }}></span>
+                                <span>กำลังบันทึก...</span>
+                              </>
+                            ) : (
+                              <>
+                                {getStatusIcon(order.status)}
+                                <span>{getStatusLabel(order.status)}</span>
+                                <i className="fa-solid fa-chevron-down ms-1 opacity-75" style={{ fontSize: '9px' }}></i>
+                              </>
+                            )}
+                          </button>
+
+                          {/* Popup Menu */}
+                          {isMenuOpen && (
+                            <div
+                              className="card position-absolute shadow-lg border-0 rounded-3 p-2 text-start"
+                              style={{
+                                top: '100%',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                minWidth: '220px',
+                                zIndex: 1060,
+                                marginTop: '6px',
+                                fontSize: '12.5px',
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="px-2 py-1 text-muted border-bottom mb-1 small d-flex align-items-center justify-content-between">
+                                <span><i className="fa-brands fa-line text-success me-1"></i>ส่งข้อความ LINE อัตโนมัติ:</span>
+                              </div>
+
+                              <button
+                                type="button"
+                                className={`btn btn-sm text-start w-100 rounded-2 py-2 px-2 mb-1 d-flex align-items-center gap-2 ${currentNorm === 'Pending' ? 'btn-primary text-white' : 'btn-light text-dark'}`}
+                                onClick={() => handleUpdateStatus(order.rowIndex, 'Pending')}
+                              >
+                                <span className="badge bg-primary rounded-circle p-1"><i className="fa-solid fa-clock"></i></span>
+                                <div>
+                                  <div className="fw-bold">⏳ รอดำเนินการ</div>
+                                  <small className="opacity-75 d-block" style={{ fontSize: '10.5px' }}>เข้าคิวรอทำในครัว</small>
+                                </div>
+                              </button>
+
+                              <button
+                                type="button"
+                                className={`btn btn-sm text-start w-100 rounded-2 py-2 px-2 mb-1 d-flex align-items-center gap-2 ${currentNorm === 'Cooking' ? 'btn-warning text-dark' : 'btn-light text-dark'}`}
+                                onClick={() => handleUpdateStatus(order.rowIndex, 'Cooking')}
+                              >
+                                <span className="badge bg-warning text-dark rounded-circle p-1"><i className="fa-solid fa-fire"></i></span>
+                                <div>
+                                  <div className="fw-bold">🍳 กำลังปรุงอาหาร</div>
+                                  <small className="opacity-75 d-block" style={{ fontSize: '10.5px' }}>แจ้งลูกค้า: แม่ครัวเริ่มทำแล้ว</small>
+                                </div>
+                              </button>
+
+                              <button
+                                type="button"
+                                className={`btn btn-sm text-start w-100 rounded-2 py-2 px-2 mb-1 d-flex align-items-center gap-2 ${currentNorm === 'Completed' ? 'btn-success text-white' : 'btn-light text-dark'}`}
+                                onClick={() => handleUpdateStatus(order.rowIndex, 'Completed')}
+                              >
+                                <span className="badge bg-success rounded-circle p-1"><i className="fa-solid fa-check"></i></span>
+                                <div>
+                                  <div className="fw-bold">✅ เสร็จสิ้น / ส่งแล้ว</div>
+                                  <small className="opacity-75 d-block" style={{ fontSize: '10.5px' }}>แจ้งลูกค้า: อาหารพร้อมรับ 🔔</small>
+                                </div>
+                              </button>
+
+                              <div className="dropdown-divider my-1"></div>
+
+                              <button
+                                type="button"
+                                className={`btn btn-sm text-start w-100 rounded-2 py-2 px-2 text-danger ${currentNorm === 'Cancelled' ? 'btn-danger text-white' : 'btn-light'}`}
+                                onClick={() => handleConfirmCancel(order.rowIndex, order.menuName)}
+                              >
+                                <span className="badge bg-danger rounded-circle p-1"><i className="fa-solid fa-xmark"></i></span>
+                                <div>
+                                  <div className="fw-bold">❌ ยกเลิกออเดอร์</div>
+                                  <small className="opacity-75 d-block" style={{ fontSize: '10.5px' }}>แจ้งเตือนยกเลิกใน LINE</small>
+                                </div>
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </td>
 
-                      {/* Actions — UX-06 */}
+                      {/* Quick Actions */}
                       <td className="text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="d-flex align-items-center justify-content-center gap-1">
+                          {/* 1-Click Quick Transition Button */}
+                          {currentNorm === 'Pending' && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-warning text-dark px-2 py-1 fw-bold shadow-sm d-flex align-items-center gap-1"
+                              style={{ fontSize: '11.5px' }}
+                              onClick={() => handleUpdateStatus(order.rowIndex, 'Cooking')}
+                              disabled={isSavingThis}
+                              title="คลิกเดียว: เริ่มปรุงทันที + ส่งแจ้งเตือนใน LINE"
+                            >
+                              <i className="fa-solid fa-fire"></i>
+                              <span>เริ่มทำ</span>
+                            </button>
+                          )}
+
+                          {currentNorm === 'Cooking' && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-success text-white px-2 py-1 fw-bold shadow-sm d-flex align-items-center gap-1"
+                              style={{ fontSize: '11.5px' }}
+                              onClick={() => handleUpdateStatus(order.rowIndex, 'Completed')}
+                              disabled={isSavingThis}
+                              title="คลิกเดียว: ปรุงเสร็จแล้ว + ส่งแจ้งเตือนใน LINE"
+                            >
+                              <i className="fa-solid fa-check"></i>
+                              <span>เสร็จแล้ว</span>
+                            </button>
+                          )}
+
+                          {currentNorm === 'Completed' && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-secondary px-2 py-1 d-flex align-items-center gap-1"
+                              style={{ fontSize: '11.5px' }}
+                              onClick={() => setOpenStatusMenuRow(isMenuOpen ? null : order.rowIndex)}
+                              disabled={isSavingThis}
+                              title="คลิกเพื่อเปลี่ยนสถานะอื่น"
+                            >
+                              <i className="fa-solid fa-arrows-rotate"></i>
+                              <span className="d-none d-md-inline">เปลี่ยน</span>
+                            </button>
+                          )}
+
+                          {currentNorm === 'Cancelled' && (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-primary px-2 py-1 d-flex align-items-center gap-1"
+                              style={{ fontSize: '11.5px' }}
+                              onClick={() => handleUpdateStatus(order.rowIndex, 'Pending')}
+                              disabled={isSavingThis}
+                              title="คืนสถานะเป็นรอดำเนินการ"
+                            >
+                              <i className="fa-solid fa-arrow-rotate-left"></i>
+                              <span>คืนค่า</span>
+                            </button>
+                          )}
+
+                          {/* Customer Details Button */}
                           <button
                             type="button"
                             className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 px-2 py-1 shadow-sm"
                             style={{ fontSize: '11.5px' }}
                             onClick={() => onViewCustomer(order)}
-                            title="กดดูรายละเอียดผู้สั่งซื้อและหมายเหตุทั้งหมด"
+                            title="กดดูรายละเอียดผู้สั่งซื้อ แผนก และหมายเหตุ"
                           >
                             <i className="fa-solid fa-eye"></i>
-                            <span>รายละเอียด</span>
+                            <span className="d-none d-sm-inline">รายละเอียด</span>
                           </button>
-
-                          {((order.status || '').toLowerCase() === 'pending' || order.status === 'รอดำเนินการ') && (
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-warning px-2 py-1 fw-semibold text-dark shadow-sm"
-                              style={{ fontSize: '11px', minWidth: '28px' }}
-                              onClick={() => handleUpdateStatus(order.rowIndex, 'Cooking')}
-                              disabled={isSavingThis}
-                              title="ปรับเป็นกำลังปรุง"
-                            >
-                              {isSavingThis
-                                ? <span className="spinner-border spinner-border-sm" style={{ width: '12px', height: '12px' }}></span>
-                                : <i className="fa-solid fa-fire"></i>}
-                            </button>
-                          )}
-
-                          {((order.status || '').toLowerCase() === 'cooking' || order.status === 'กำลังปรุง') && (
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-success px-2 py-1 fw-semibold shadow-sm"
-                              style={{ fontSize: '11px', minWidth: '28px' }}
-                              onClick={() => handleUpdateStatus(order.rowIndex, 'Delivered')}
-                              disabled={isSavingThis}
-                              title="ปรับเป็นส่งแล้ว"
-                            >
-                              {isSavingThis
-                                ? <span className="spinner-border spinner-border-sm" style={{ width: '12px', height: '12px' }}></span>
-                                : <i className="fa-solid fa-check"></i>}
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
