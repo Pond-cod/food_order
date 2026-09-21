@@ -10,6 +10,7 @@ import ContactInputs from '../components/order/ContactInputs';
 import QuickNoteChips from '../components/order/QuickNoteChips';
 import OrderSummary from '../components/order/OrderSummary';
 import Loading from '../components/common/Loading';
+import LineFriendModal from '../components/order/LineFriendModal';
 import { formatCurrency } from '../utils/formatters';
 import { DEFAULT_AVATAR } from '../utils/assets';
 
@@ -36,6 +37,7 @@ export default function OrderPage() {
   const [department, setDepartment] = useState('');
   const [note, setNote] = useState('');
   const [isOfflineFallback, setIsOfflineFallback] = useState(false);
+  const [showLineFriendModal, setShowLineFriendModal] = useState(false);
 
   const [isLoading, setIsLoading] = useState(() => {
     try {
@@ -56,6 +58,17 @@ export default function OrderPage() {
       const savedDept = localStorage.getItem('user_order_dept');
       if (savedPhone) setPhone(savedPhone);
       if (savedDept) setDepartment(savedDept);
+    } catch (e) {}
+
+    // ตรวจสอบการเข้าหน้าสั่งอาหารครั้งแรก เพื่อแสดงปุ่มเพิ่มเพื่อน LINE & QR Code
+    try {
+      const hasSeen = localStorage.getItem('has_seen_line_friend_modal');
+      if (!hasSeen) {
+        const timer = setTimeout(() => {
+          setShowLineFriendModal(true);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
     } catch (e) {}
   }, []);
 
@@ -378,18 +391,32 @@ export default function OrderPage() {
               </div>
             </div>
 
-            {/* Live Round Badge (Frosted Glass) */}
-            <div className={`round-badge-glass d-flex align-items-center gap-2 ${
-              isRoundClosed ? 'bg-danger bg-opacity-25 border-danger' : ''
-            }`}>
-              <span className={`pulse-dot ${isRoundClosed ? 'bg-danger' : 'bg-warning'}`} style={{ width: '10px', height: '10px' }}></span>
-              <div>
-                <small className="d-block text-white text-opacity-80" style={{ fontSize: '11px', lineHeight: 1.2 }}>
-                  {isRoundClosed ? 'สถานะการสั่งซื้อ:' : 'รอบเปิดรับอาหาร:'}
-                </small>
-                <strong className="text-white" style={{ fontSize: '13.5px' }}>
-                  {currentRound || 'รอบปกติ'}
-                </strong>
+            {/* Right Controls: LINE Add Friend Button & Live Round Badge */}
+            <div className="d-flex flex-wrap align-items-center gap-2">
+              <button
+                type="button"
+                className="btn btn-sm btn-light text-success fw-bold rounded-pill px-3 py-1 shadow-sm d-inline-flex align-items-center gap-1 border-0"
+                style={{ fontSize: '12.5px', transition: 'all 0.2s ease', cursor: 'pointer' }}
+                onClick={() => setShowLineFriendModal(true)}
+                title="คลิกเพื่อดู QR Code หรือเพิ่มเพื่อน LINE OA"
+              >
+                <i className="fa-brands fa-line fs-5 text-success"></i>
+                <span className="d-none d-sm-inline">เพิ่มเพื่อน LINE</span>
+                <span className="d-inline d-sm-none">เพิ่มเพื่อน</span>
+              </button>
+
+              <div className={`round-badge-glass d-flex align-items-center gap-2 ${
+                isRoundClosed ? 'bg-danger bg-opacity-25 border-danger' : ''
+              }`}>
+                <span className={`pulse-dot ${isRoundClosed ? 'bg-danger' : 'bg-warning'}`} style={{ width: '10px', height: '10px' }}></span>
+                <div>
+                  <small className="d-block text-white text-opacity-80" style={{ fontSize: '11px', lineHeight: 1.2 }}>
+                    {isRoundClosed ? 'สถานะการสั่งซื้อ:' : 'รอบเปิดรับอาหาร:'}
+                  </small>
+                  <strong className="text-white" style={{ fontSize: '13.5px' }}>
+                    {currentRound || 'รอบปกติ'}
+                  </strong>
+                </div>
               </div>
             </div>
           </div>
@@ -612,6 +639,12 @@ export default function OrderPage() {
         totalPrice={totalPrice}
         onSubmit={handleSubmitOrder}
         isSubmitting={isSubmitting}
+      />
+
+      {/* LINE Official Account Add Friend & QR Code Modal */}
+      <LineFriendModal
+        isOpen={showLineFriendModal}
+        onClose={() => setShowLineFriendModal(false)}
       />
     </div>
   );

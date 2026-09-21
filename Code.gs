@@ -523,7 +523,7 @@ function buildOrderReceiptFlex(orderData, ss) {
 }
 
 /**
- * ดึงรายชื่อ LINE User ID ของทีมงาน/แม่ครัว/เจ้าของร้าน ตามบทบาทที่กำหนด (เช่น Cook, SuperAdmin)
+ * ดึงรายชื่อ LINE User ID ของทีมงาน/แม่ครัว/เจ้าของร้าน ตามบทบาทที่กำหนด (เช่น Cook, SuperAdmin, Admin)
  */
 function getStaffNotificationTargets(ss, targetRoles) {
   const targets = [];
@@ -533,23 +533,31 @@ function getStaffNotificationTargets(ss, targetRoles) {
   if (!adminSheet) return targets;
 
   const data = adminSheet.getDataRange().getValues();
-  const normalizedRoles = (targetRoles || []).map(function(r) { return String(r).trim().toLowerCase(); });
+  const normalizedRoles = (targetRoles && targetRoles.length > 0)
+    ? targetRoles.map(function(r) { return String(r).trim().toLowerCase(); })
+    : ["cook", "superadmin", "admin"];
 
   for (let i = 1; i < data.length; i++) {
     const uid = String(data[i][0] || "").trim();
-    const displayName = String(data[i][1] || "Admin");
+    const displayName = String(data[i][1] || "ผู้ดูแลระบบ");
     const role = String(data[i][2] || "Admin").trim().toLowerCase();
     const status = String(data[i][4] || "Active").trim().toLowerCase();
 
     const isActive = (status !== "inactive" && status !== "ปิดใช้งาน");
-    const isTarget = normalizedRoles.includes(role) || normalizedRoles.includes("all");
+    const isTarget = normalizedRoles.includes(role) ||
+                     normalizedRoles.includes("all") ||
+                     role.includes("cook") ||
+                     role.includes("admin") ||
+                     role.includes("ครัว");
 
     if (uid && uid.startsWith("U") && isActive && isTarget) {
-      targets.push({
-        userId: uid,
-        displayName: displayName,
-        role: data[i][2]
-      });
+      if (!targets.some(function(t) { return t.userId === uid; })) {
+        targets.push({
+          userId: uid,
+          displayName: displayName,
+          role: data[i][2] || "Admin"
+        });
+      }
     }
   }
   return targets;
@@ -569,7 +577,7 @@ function buildKitchenNewOrderFlex(orderData, adminUrl) {
   const totalQty = orderData.totalQuantity || items.length;
   const totalPrice = orderData.totalPrice || 0;
   const note = (orderData.note && orderData.note !== "-") ? orderData.note : "";
-  const url = adminUrl || LIFF_ORDER_URL;
+  const url = (adminUrl && adminUrl.startsWith("http")) ? adminUrl : LIFF_ORDER_URL;
 
   const itemBoxes = items.map(function(it) {
     let name = String(it.menuName || "").trim();
@@ -1070,7 +1078,28 @@ function handleIncomingLineMessage(ss, token, event) {
       return;
     }
 
-    // 5. ข้อความเริ่มต้น / ข้อความทั่วไป -> ส่ง Quick Reply อำนวยความสะดวก
+    // 5. ตรวจสอบคีย์เวิร์ด แนะนำการสั่ง / วิธีสั่ง / การแจ้งเตือน / คู่มือ / ช่วยเหลือ
+    if (lower.includes("แนะนำ") || lower.includes("วิธี") || lower.includes("คู่มือ") || lower.includes("สอน") || lower.includes("ช่วย") || lower.includes("แจ้งเตือน") || lower.includes("help") || lower.includes("การสั่ง")) {
+      const liffUrl = getSettingValue(ss, "LiffUrl", LIFF_ORDER_URL);
+      const guideText = getOrderGuideMessage();
+      replyLineMessage(token, replyToken, [
+        {
+          "type": "text",
+          "text": guideText,
+          "quickReply": {
+            "items": [
+              { "type": "action", "action": { "type": "uri", "label": "🛒 สั่งอาหารรอบนี้", "uri": liffUrl } },
+              { "type": "action", "action": { "type": "message", "label": "🔍 เช็คสถานะออเดอร์", "text": "เช็คสถานะ" } },
+              { "type": "action", "action": { "type": "message", "label": "💳 เลขบัญชีโอนเงิน", "text": "เลขบัญชี" } },
+              { "type": "action", "action": { "type": "message", "label": "📞 ติดต่อร้านค้า", "text": "ติดต่อร้าน" } }
+            ]
+          }
+        }
+      ]);
+      return;
+    }
+
+    // 6. ข้อความเริ่มต้น / ข้อความทั่วไป -> ส่ง Quick Reply อำนวยความสะดวก
     const liffUrl = getSettingValue(ss, "LiffUrl", LIFF_ORDER_URL);
     replyLineMessage(token, replyToken, [
       {
@@ -1098,7 +1127,25 @@ function handleIncomingLineMessage(ss, token, event) {
 }
 
 /**
- * จัดการเมื่อมีลูกค้ากดติดตาม LINE OA ใหม่
+ * ข้อความแนะนำขั้นตอนการสั่งอาหารและระบบการแจ้งเตือนอัตโนมัติ
+ */
+function getOrderGuideMessage() {
+  return "สวัสดีค่ะ ยินดีต้อนรับสู่ระบบสั่งอาหารออนไลน์ 🍱✨\n\n" +
+    "📌 แนะนำขั้นตอนการสั่งอาหาร:\n" +
+    "1️⃣ แตะปุ่ม \"🛒 สั่งอาหารรอบนี้\" ด้านล่าง\n" +
+    "2️⃣ เลือกเมนูที่ชอบ (ระบุพิเศษ / +ไข่ดาว / โน้ตรสชาติได้)\n" +
+    "3️⃣ ใส่เบอร์โทร และ แผนก/โต๊ะจัดส่ง แล้วกดยืนยันสั่งอาหาร\n\n" +
+    "🔔 ระบบการแจ้งเตือนอัตโนมัติ:\n" +
+    "• 🧾 ได้รับใบเสร็จยืนยันออเดอร์ในแชทนี้ทันทีหลังสั่ง\n" +
+    "• 🍳 ครัวรับออเดอร์และเริ่มปรุงสดใหม่ทันที\n" +
+    "• 🔔 ได้รับแจ้งเตือนทันทีเมื่ออาหารปรุงเสร็จพร้อมส่ง\n" +
+    "• 🔍 พิมพ์ \"เช็คสถานะ\" เพื่อดูความคืบหน้าออเดอร์ได้ตลอดเวลาค่ะ\n\n" +
+    "แตะปุ่มด้านล่างเพื่อเริ่มสั่งอาหารได้เลยนะคะ 👇";
+}
+
+/**
+ * จัดการเมื่อมีลูกค้ากดติดตาม LINE OA ใหม่ (Follow Event)
+ * ส่งข้อความแนะนำการสั่งอาหาร ระบบแจ้งเตือน และการ์ดเมนูสั่งอาหาร
  */
 function handleLineFollowEvent(ss, token, event) {
   const replyToken = event.replyToken;
@@ -1106,10 +1153,20 @@ function handleLineFollowEvent(ss, token, event) {
   const menus = getAvailableMenus(ss);
   const liffUrl = getSettingValue(ss, "LiffUrl", LIFF_ORDER_URL);
   const flexCard = buildRoundAnnouncementFlex(round, "เปิดรับออเดอร์พร้อมบริการค่ะ", menus, liffUrl);
+  const guideText = getOrderGuideMessage();
+
   replyLineMessage(token, replyToken, [
     {
       "type": "text",
-      "text": "ยินดีต้อนรับเข้าสู่ช่องทางสั่งอาหารออนไลน์อย่างเป็นทางการค่ะ! 🎉\nคุณสามารถกดดูเมนูและสั่งอาหารได้สะดวกผ่านลิงก์ด้านล่างนี้ได้เลยนะคะ 👇"
+      "text": guideText,
+      "quickReply": {
+        "items": [
+          { "type": "action", "action": { "type": "uri", "label": "🛒 สั่งอาหารรอบนี้", "uri": liffUrl } },
+          { "type": "action", "action": { "type": "message", "label": "🔍 เช็คสถานะออเดอร์", "text": "เช็คสถานะ" } },
+          { "type": "action", "action": { "type": "message", "label": "💳 เลขบัญชีโอนเงิน", "text": "เลขบัญชี" } },
+          { "type": "action", "action": { "type": "message", "label": "📞 ติดต่อร้านค้า", "text": "ติดต่อร้าน" } }
+        ]
+      }
     },
     flexCard
   ]);
@@ -1510,6 +1567,7 @@ function doPost(e) {
 
       // 1. ส่ง Push Message ตรงเข้าห้องแชท LINE OA ของลูกค้ารายบุคคล (ถ้ามี Token)
       let linePushed = false;
+      let staffNotifiedList = [];
       try {
         const token = getLineChannelAccessToken(ss);
         if (token && userId && String(userId).startsWith("U")) {
@@ -1532,10 +1590,15 @@ function doPost(e) {
             note: combinedNote
           }, liffUrl);
 
-          const staffTargets = getStaffNotificationTargets(ss, ["cook", "superadmin"]);
+          const staffTargets = getStaffNotificationTargets(ss, ["cook", "superadmin", "admin"]);
           staffTargets.forEach(function(staff) {
-            if (staff.userId && staff.userId !== userId) {
-              sendLinePush(token, staff.userId, [kitchenFlex]);
+            if (staff.userId) {
+              const sRes = sendLinePush(token, staff.userId, [kitchenFlex]);
+              if (sRes.success) {
+                staffNotifiedList.push(staff.displayName + " (" + staff.role + ")");
+              } else {
+                console.warn("Staff push to " + staff.userId + " failed: " + sRes.error);
+              }
             }
           });
 
@@ -1553,6 +1616,7 @@ function doPost(e) {
         status: "success",
         message: `บันทึกออเดอร์ ${validItems.length} รายการเรียบร้อยแล้ว`,
         linePushed: linePushed,
+        staffNotified: staffNotifiedList,
         flexReceipt: flexReceipt,
         data: {
           timestamp,
