@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Swal from 'sweetalert2';
 import KitchenSummary from './KitchenSummary';
 import { DEFAULT_AVATAR } from '../../utils/assets';
@@ -104,6 +104,43 @@ export default function KitchenOrdersView({
     return () => window.removeEventListener('click', handleGlobalClick);
   }, []);
 
+  // รวมออเดอร์ที่เป็นบิลเดียวกัน (กรณีเป็นข้อมูลเดิมที่เคยแยกแถวไว้ หรือสั่งเวลาเดียวกัน)
+  const consolidatedOrders = useMemo(() => {
+    const map = new Map();
+    const result = [];
+
+    (orders || []).forEach((order) => {
+      const userKey = (order.userId && order.userId !== '-') ? order.userId : (order.displayName || 'anon');
+      const billKey = `${order.timestamp}_${userKey}_${order.round}`;
+
+      if (map.has(billKey)) {
+        const existing = map.get(billKey);
+        const existingMenu = existing.menuName;
+        const newMenu = order.menuName;
+        if (!existingMenu.includes(newMenu)) {
+          existing.menuName = `${existingMenu}, ${newMenu}`;
+        }
+        existing.quantity = (Number(existing.quantity) || 1) + (Number(order.quantity) || 1);
+        if (!Array.isArray(existing.rowIndices)) {
+          existing.rowIndices = [existing.rowIndex];
+        }
+        existing.rowIndices.push(order.rowIndex);
+        if (order.note && order.note !== '-' && !existing.note.includes(order.note)) {
+          existing.note = existing.note === '-' ? order.note : `${existing.note}; ${order.note}`;
+        }
+      } else {
+        const itemCopy = {
+          ...order,
+          rowIndices: [order.rowIndex],
+        };
+        map.set(billKey, itemCopy);
+        result.push(itemCopy);
+      }
+    });
+
+    return result;
+  }, [orders]);
+
   // Auto-refresh ทุก 60 วินาที
   useEffect(() => {
     const interval = setInterval(() => {
@@ -123,7 +160,7 @@ export default function KitchenOrdersView({
     if (typeof onRefresh === 'function') onRefresh();
   }, [onRefresh]);
 
-  // ฟังก์ชันอัปเดตสถานะ (ส่งแจ้งเตือนเข้า LINE อัตโนมัติ)
+  // ฟังก์ชันอัปเดตสถานะ (ส่งแจ้งเตือนเข้า LINE อัตโนมัติ 1 ข้อความต่อบิล)
   const handleUpdateStatus = useCallback(async (rowIndex, newStatus) => {
     setOpenStatusMenuRow(null);
     setSavingRowIndex(rowIndex);
@@ -151,12 +188,12 @@ export default function KitchenOrdersView({
     }
   };
 
-  const pendingCount = orders.filter((o) => normalizeStatus(o.status) === 'Pending').length;
-  const cookingCount = orders.filter((o) => normalizeStatus(o.status) === 'Cooking').length;
-  const deliveredCount = orders.filter((o) => normalizeStatus(o.status) === 'Completed').length;
-  const cancelledCount = orders.filter((o) => normalizeStatus(o.status) === 'Cancelled').length;
+  const pendingCount = consolidatedOrders.filter((o) => normalizeStatus(o.status) === 'Pending').length;
+  const cookingCount = consolidatedOrders.filter((o) => normalizeStatus(o.status) === 'Cooking').length;
+  const deliveredCount = consolidatedOrders.filter((o) => normalizeStatus(o.status) === 'Completed').length;
+  const cancelledCount = consolidatedOrders.filter((o) => normalizeStatus(o.status) === 'Cancelled').length;
 
-  const filteredOrders = orders.filter((o) => {
+  const filteredOrders = consolidatedOrders.filter((o) => {
     const norm = normalizeStatus(o.status);
     if (statusFilter === 'PENDING' && norm !== 'Pending') return false;
     if (statusFilter === 'COOKING' && norm !== 'Cooking') return false;
@@ -178,7 +215,7 @@ export default function KitchenOrdersView({
     <div className="kitchen-orders-container mb-4">
       {/* 1. สรุปยอดครัว */}
       <div className="mb-4">
-        <KitchenSummary summary={kitchenSummary} orders={orders} menus={menus} currentRound={currentRound} />
+        <KitchenSummary summary={kitchenSummary} orders={consolidatedOrders} menus={menus} currentRound={currentRound} />
       </div>
 
       {/* 2. รายการสั่งซื้อ */}
@@ -189,11 +226,11 @@ export default function KitchenOrdersView({
             <h5 className="fw-bold mb-1 d-flex align-items-center gap-2 text-dark">
               <i className="fa-solid fa-clipboard-list text-success"></i>
               <span>รายการสั่งซื้อทั้งหมด</span>
-              <span className="badge bg-dark rounded-pill px-2">{orders.length} ออเดอร์</span>
+              <span className="badge bg-dark rounded-pill px-2">{consolidatedOrders.length} บิล</span>
             </h5>
             <div className="d-flex flex-wrap align-items-center gap-2 mt-1">
               <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
-                <i className="fa-brands fa-line me-1"></i>ระบบส่งแจ้งเตือนเข้า LINE ลูกค้าอัตโนมัติเมื่อเปลี่ยนสถานะ
+                <i className="fa-brands fa-line me-1"></i>ระบบส่งแจ้งเตือนเข้า LINE ลูกค้าอัตโนมัติ (1 ข้อความต่อบิล)
               </span>
               <small className="text-secondary">
                 คลิกปุ่มสถานะเพื่อเลือกเปลี่ยนได้ทันที
@@ -233,7 +270,7 @@ export default function KitchenOrdersView({
         <div className="row g-2 align-items-center mb-3">
           <div className="col-12 col-lg-7 d-flex flex-wrap gap-1">
             {[
-              { key: 'ALL', label: `ทั้งหมด (${orders.length})`, cls: 'btn-dark', inactiveCls: 'btn-light border text-secondary' },
+              { key: 'ALL', label: `ทั้งหมด (${consolidatedOrders.length})`, cls: 'btn-dark', inactiveCls: 'btn-light border text-secondary' },
               { key: 'PENDING', label: `รอดำเนินการ (${pendingCount})`, icon: 'fa-clock', cls: 'btn-primary', inactiveCls: 'btn-light border text-primary' },
               { key: 'COOKING', label: `กำลังปรุง (${cookingCount})`, icon: 'fa-fire', cls: 'btn-warning text-dark', inactiveCls: 'btn-light border text-warning' },
               { key: 'COMPLETED', label: `เสร็จสิ้น (${deliveredCount})`, icon: 'fa-check', cls: 'btn-success', inactiveCls: 'btn-light border text-success' },

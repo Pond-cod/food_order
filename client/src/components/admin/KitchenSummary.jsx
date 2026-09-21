@@ -1,6 +1,32 @@
 import React from 'react';
 import { formatCurrency } from '../../utils/formatters';
 
+/**
+ * แจกแจงรายการเมนูจากสตริง เช่น "ข้าวผัดหมู x 1, ข้าวกะเพราหมูกรอบ (พิเศษ) x 2"
+ */
+function parseDishEntries(rawMenuName, fallbackQty) {
+  if (!rawMenuName) return [];
+  const entries = [];
+  const parts = rawMenuName.includes(',') ? rawMenuName.split(/,\s*/) : [rawMenuName];
+  parts.forEach((part) => {
+    const p = part.trim();
+    if (!p) return;
+    const match = p.match(/^(.*?)\s*[xX*]\s*(\d+)$/);
+    if (match) {
+      entries.push({
+        dishName: match[1].trim(),
+        qty: parseInt(match[2], 10) || 1,
+      });
+    } else {
+      entries.push({
+        dishName: p,
+        qty: parts.length === 1 ? (fallbackQty || 1) : 1,
+      });
+    }
+  });
+  return entries;
+}
+
 export default function KitchenSummary({ orders = [], menus = [], currentRound = '', summary = {} }) {
   // คำนวณสรุป
   let computedBoxes = 0;
@@ -10,26 +36,32 @@ export default function KitchenSummary({ orders = [], menus = [], currentRound =
   (orders || []).forEach((o) => {
     const status = String(o.status || '').toLowerCase();
     if (status !== 'cancelled' && status !== 'ยกเลิก') {
-      const qty = Number(o.quantity) || 1;
-      computedBoxes += qty;
-
+      const oQty = Number(o.quantity) || 1;
       const rawMenuName = String(o.menuName || '').trim();
-      // ตัดวงเล็บตัวเลือกเสริมออก เช่น "ข้าวกะเพราหมูกรอบ (พิเศษ, +ไข่ดาว)" -> "ข้าวกะเพราหมูกรอบ"
-      const baseMenuName = rawMenuName.replace(/\s*\(.*?\)\s*$/, '').trim();
+      const dishes = parseDishEntries(rawMenuName, oQty);
 
-      // ค้นหาเมนูเทียบทั้งแบบเต็มและแบบชื่อฐาน
-      const m = (menus || []).find((item) => item.name === rawMenuName || item.name === baseMenuName);
-      let unitPrice = m ? (Number(m.price) || 0) : 0;
+      let orderBoxSum = 0;
+      dishes.forEach(({ dishName, qty }) => {
+        orderBoxSum += qty;
+        // ตัดวงเล็บตัวเลือกเสริมออก เช่น "ข้าวกะเพราหมูกรอบ (พิเศษ, +ไข่ดาว)" -> "ข้าวกะเพราหมูกรอบ"
+        const baseMenuName = dishName.replace(/\s*\(.*?\)\s*$/, '').trim();
 
-      // ตรวจสอบและบวกราคาตัวเลือกเสริม
-      if (rawMenuName.includes('พิเศษ')) unitPrice += 10;
-      if (rawMenuName.includes('ไข่ดาว')) unitPrice += 10;
+        // ค้นหาเมนูเทียบทั้งแบบเต็มและแบบชื่อฐาน
+        const m = (menus || []).find((item) => item.name === dishName || item.name === baseMenuName);
+        let unitPrice = m ? (Number(m.price) || 0) : 0;
 
-      computedRev += unitPrice * qty;
+        // ตรวจสอบและบวกราคาตัวเลือกเสริม
+        if (dishName.includes('พิเศษ')) unitPrice += 10;
+        if (dishName.includes('ไข่ดาว')) unitPrice += 10;
 
-      if (o.round === currentRound) {
-        computedKitchenCount[rawMenuName] = (computedKitchenCount[rawMenuName] || 0) + qty;
-      }
+        computedRev += unitPrice * qty;
+
+        if (o.round === currentRound) {
+          computedKitchenCount[dishName] = (computedKitchenCount[dishName] || 0) + qty;
+        }
+      });
+
+      computedBoxes += (orderBoxSum > 0 ? orderBoxSum : oQty);
     }
   });
 

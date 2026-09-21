@@ -20,25 +20,37 @@ const DEFAULT_LINE_CHANNEL_ACCESS_TOKEN = "DDl3V708kDrN/M7wBTU9/ZkHfNb3wIz5XCWdw
 const LIFF_ORDER_URL = "https://liff.line.me/2011625055-XnlJJcQp";
 
 /**
- * ดึง Spreadsheet Object
+ * ดึง Spreadsheet Object (พร้อม In-Memory Cache เพื่อความรวดเร็ว)
  */
+let _memCachedSpreadsheet = null;
+let _memCachedSettingsMap = null;
+
 function getSpreadsheet() {
+  if (_memCachedSpreadsheet) return _memCachedSpreadsheet;
   if (SPREADSHEET_ID && SPREADSHEET_ID !== "") {
     try {
-      return SpreadsheetApp.openById(SPREADSHEET_ID);
+      _memCachedSpreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+      return _memCachedSpreadsheet;
     } catch (e) {
       console.warn("Cannot open by ID, falling back to active spreadsheet: " + e.message);
     }
   }
-  return SpreadsheetApp.getActiveSpreadsheet();
+  _memCachedSpreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  return _memCachedSpreadsheet;
+}
+
+function clearSettingsCache() {
+  _memCachedSettingsMap = null;
 }
 
 /**
- * ดึงการตั้งค่าทั้งหมดจากชีท 'Settings' ในรูปแบบ Map
+ * ดึงการตั้งค่าทั้งหมดจากชีท 'Settings' ในรูปแบบ Map (มี In-Memory Cache)
  */
 function getSettingsMap(ss) {
+  if (_memCachedSettingsMap) return _memCachedSettingsMap;
   const map = {};
-  const settingsSheet = ss.getSheetByName("Settings");
+  const targetSs = ss || getSpreadsheet();
+  const settingsSheet = targetSs ? targetSs.getSheetByName("Settings") : null;
   if (!settingsSheet) return map;
   const data = settingsSheet.getDataRange().getValues();
   for (let i = 0; i < data.length; i++) {
@@ -47,6 +59,7 @@ function getSettingsMap(ss) {
       map[key] = String(data[i][1] || "").trim();
     }
   }
+  _memCachedSettingsMap = map;
   return map;
 }
 
@@ -63,6 +76,7 @@ function getSettingValue(ss, keyName, defaultValue) {
  * บันทึกค่าลงในชีท 'Settings'
  */
 function setSettingValue(ss, keyName, value) {
+  clearSettingsCache();
   let settingsSheet = ss.getSheetByName("Settings");
   if (!settingsSheet) {
     settingsSheet = ss.insertSheet("Settings");
@@ -642,13 +656,18 @@ function buildOrderStatusFlex(round, menuName, quantity, newStatus, customerName
   const url = liffUrl || LIFF_ORDER_URL;
   const s = String(newStatus || "").trim().toLowerCase();
 
+  const mStr = String(menuName || "").trim();
+  const qNum = parseInt(quantity, 10) || 1;
+  const hasMultipleOrMultiplier = mStr.includes(',') || mStr.includes(' x ') || mStr.includes(' x') || mStr.includes('x');
+  const menuDisplay = hasMultipleOrMultiplier ? mStr : (mStr + (qNum > 1 ? (" x " + qNum) : ""));
+
   let headerColor = "#059669";
   let title = "🔔 อาหารของคุณพร้อมแล้ว!";
   let subtitle = "อาหารปรุงเสร็จเรียบร้อยแล้วค่ะ";
   let statusBadge = "✅ พร้อมรับประทาน / เสร็จสิ้น";
   let statusBadgeBg = "#DCFCE7";
   let statusBadgeColor = "#166534";
-  let desc = "รายการ " + menuName + " (จำนวน " + quantity + " กล่อง) ปรุงเสร็จเรียบร้อยแล้ว สามารถมารับได้ที่จุดรับอาหารได้เลยนะคะ 😋🍽️";
+  let desc = "รายการ " + menuDisplay + (qNum > 1 ? (" (รวม " + qNum + " กล่อง)") : "") + " ปรุงเสร็จเรียบร้อยแล้ว สามารถมารับได้ที่จุดรับอาหารได้เลยนะคะ 😋🍽️";
 
   if (s === "cooking" || s === "กำลังทำ" || s === "กำลังปรุง") {
     headerColor = "#D97706";
@@ -657,7 +676,7 @@ function buildOrderStatusFlex(round, menuName, quantity, newStatus, customerName
     statusBadge = "🔥 กำลังปรุงอาหาร";
     statusBadgeBg = "#FEF3C7";
     statusBadgeColor = "#B45309";
-    desc = "แม่ครัวเริ่มลงมือปรุง " + menuName + " (จำนวน " + quantity + " กล่อง) ให้แล้วนะคะ รอสักครู่ เมื่อเสร็จแล้วระบบจะแจ้งเตือนทันทีค่ะ 🍳✨";
+    desc = "แม่ครัวเริ่มลงมือปรุง " + menuDisplay + " ให้แล้วนะคะ รอสักครู่ เมื่อเสร็จแล้วระบบจะแจ้งเตือนทันทีค่ะ 🍳✨";
   } else if (s === "cancelled" || s === "ยกเลิก") {
     headerColor = "#DC2626";
     title = "❌ แจ้งเตือน: ออเดอร์ถูกยกเลิก";
@@ -665,7 +684,7 @@ function buildOrderStatusFlex(round, menuName, quantity, newStatus, customerName
     statusBadge = "🚫 ยกเลิกรายการ";
     statusBadgeBg = "#FEE2E2";
     statusBadgeColor = "#991B1B";
-    desc = "รายการ " + menuName + " ของคุณถูกยกเลิก หากมีข้อสงสัยสามารถติดต่อทางร้านผ่านแชทนี้ได้เลยนะคะ 🙏";
+    desc = "รายการ " + menuDisplay + " ของคุณถูกยกเลิก หากมีข้อสงสัยสามารถติดต่อทางร้านผ่านแชทนี้ได้เลยนะคะ 🙏";
   } else if (s === "pending" || s === "รอดำเนินการ") {
     headerColor = "#2563EB";
     title = "📋 รับออเดอร์แล้ว เข้าคิวในครัว";
@@ -673,12 +692,12 @@ function buildOrderStatusFlex(round, menuName, quantity, newStatus, customerName
     statusBadge = "⏳ รอดำเนินการ";
     statusBadgeBg = "#DBEAFE";
     statusBadgeColor = "#1E40AF";
-    desc = "รายการ " + menuName + " (จำนวน " + quantity + " กล่อง) ได้รับคำสั่งซื้อแล้ว รอแม่ครัวจัดเตรียมตามคิวค่ะ ✨";
+    desc = "รายการ " + menuDisplay + " ได้รับคำสั่งซื้อแล้ว รอแม่ครัวจัดเตรียมตามคิวค่ะ ✨";
   }
 
   return {
     "type": "flex",
-    "altText": title + ": " + menuName,
+    "altText": title + ": " + menuDisplay,
     "contents": {
       "type": "bubble",
       "size": "mega",
@@ -714,7 +733,7 @@ function buildOrderStatusFlex(round, menuName, quantity, newStatus, customerName
             "spacing": "xs",
             "contents": [
               { "type": "text", "text": "รอบ: " + round, "size": "xs", "color": "#64748B" },
-              { "type": "text", "text": "เมนู: " + menuName + " x " + quantity, "size": "sm", "weight": "bold", "color": "#1E293B" }
+              { "type": "text", "text": "เมนู: " + menuDisplay, "size": "sm", "weight": "bold", "color": "#1E293B", "wrap": true }
             ]
           },
           { "type": "separator", "color": "#E2E8F0" },
@@ -917,6 +936,28 @@ function handleLineFollowEvent(ss, token, event) {
 // ====================================================================
 
 /**
+ * แจกแจงรายการอาหารจากสตริงเพื่อนำไปรวมยอดในห้องครัว (Kitchen Summary)
+ */
+function addDishesToKitchenSummary(summaryMap, menuString, totalQty) {
+  if (!menuString) return;
+  const str = String(menuString).trim();
+  const parts = str.includes(',') ? str.split(/,\s*/) : [str];
+  parts.forEach(function(part) {
+    const p = part.trim();
+    if (!p) return;
+    const match = p.match(/^(.*?)\s*[xX*]\s*(\d+)$/);
+    if (match) {
+      const dish = match[1].trim();
+      const count = parseInt(match[2], 10) || 1;
+      summaryMap[dish] = (summaryMap[dish] || 0) + count;
+    } else {
+      const count = parts.length === 1 ? (totalQty || 1) : 1;
+      summaryMap[p] = (summaryMap[p] || 0) + count;
+    }
+  });
+}
+
+/**
  * GET Request: จัดการคำขอทั้งฝั่งลูกค้าและหลังบ้าน
  */
 function doGet(e) {
@@ -1003,7 +1044,7 @@ function doGet(e) {
           const oStatus = String(row[7] || "Pending").trim();
 
           if (oRound === currentRound && oStatus !== "Cancelled") {
-            kitchenSummary[oMenu] = (kitchenSummary[oMenu] || 0) + oQty;
+            addDishesToKitchenSummary(kitchenSummary, oMenu, oQty);
           }
 
           if (i >= startRow) {
@@ -1219,7 +1260,8 @@ function doPost(e) {
         if (!headers[11]) orderSheet.getRange(1, 12).setValue("StatusMessage");
       }
 
-      const rowsToAdd = validItems.map(item => {
+      // รวมทุกเมนูในบิลเดียวกันเป็น 1 คำสั่งซื้อ (1 แถวใน Google Sheets)
+      const itemSummaries = validItems.map(item => {
         let finalMenuName = String(item.menuName || '').trim();
         const extras = [];
         if (item.isExtra && !finalMenuName.includes('พิเศษ')) extras.push('พิเศษ');
@@ -1227,28 +1269,47 @@ function doPost(e) {
         if (extras.length > 0) {
           finalMenuName += ` (${extras.join(', ')})`;
         }
-
-        const itemNote = (item.note && String(item.note).trim() !== "-" && String(item.note).trim() !== "") 
-          ? String(item.note).trim() 
-          : generalNote;
-        return [
-          timestamp,
-          round,
-          userId,
-          displayName,
-          finalMenuName,
-          parseInt(item.quantity, 10) || 1,
-          itemNote,
-          status,
-          pictureUrl,
-          phone,
-          department,
-          statusMessage
-        ];
+        const qty = parseInt(item.quantity, 10) || 1;
+        return (validItems.length === 1 && qty === 1) ? finalMenuName : `${finalMenuName} x ${qty}`;
       });
+      const combinedMenuName = itemSummaries.join(', ');
+      const totalQuantity = validItems.reduce((sum, it) => sum + (parseInt(it.quantity, 10) || 1), 0);
 
-      const nextRow = orderSheet.getLastRow() + 1;
-      orderSheet.getRange(nextRow, 1, rowsToAdd.length, 12).setValues(rowsToAdd);
+      // รวมหมายเหตุ
+      const distinctNotes = [];
+      validItems.forEach(it => {
+        const n = String(it.note || '').trim();
+        if (n && n !== '-' && !distinctNotes.includes(n)) {
+          distinctNotes.push(n);
+        }
+      });
+      if (generalNote && generalNote !== '-' && !distinctNotes.includes(generalNote)) {
+        distinctNotes.push(generalNote);
+      }
+      const combinedNote = distinctNotes.length > 0 ? distinctNotes.join('; ') : '-';
+
+      // บันทึกแถวเดียวอย่างรวดเร็ว (Atomic appendRow)
+      orderSheet.appendRow([
+        timestamp,
+        round,
+        userId,
+        displayName,
+        combinedMenuName,
+        totalQuantity,
+        combinedNote,
+        status,
+        pictureUrl,
+        phone,
+        department,
+        statusMessage
+      ]);
+
+      // ล้าง Cache เพื่อให้ Dashboard ได้ข้อมูลออเดอร์ใหม่ทันที
+      try {
+        const scriptCache = CacheService.getScriptCache();
+        scriptCache.remove("admin_dash_cache");
+        scriptCache.remove("appData_fast_cache");
+      } catch (cErr) {}
 
       // สร้าง Flex Receipt สำหรับส่งเข้า LINE OA ของลูกค้า
       const flexReceipt = buildOrderReceiptFlex({
@@ -1491,7 +1552,7 @@ function doPost(e) {
       throw new Error("ไม่พบแถวเมนูที่ต้องการลบ");
     }
 
-    // 6. ปรับสถานะออเดอร์ (updateOrderStatus) พร้อมส่งแจ้งเตือนใน LINE
+    // 6. ปรับสถานะออเดอร์ (updateOrderStatus) พร้อมส่งแจ้งเตือนใน LINE (รวมบิลเดียวกัน ส่ง 1 แจ้งเตือน)
     if (action === "updateOrderStatus") {
       const rowIndex = parseInt(payload.rowIndex, 10);
       const newStatus = payload.newStatus || "Completed";
@@ -1500,18 +1561,59 @@ function doPost(e) {
       const orderSheet = ss.getSheetByName("Orders");
 
       if (rowIndex > 1 && orderSheet) {
-        orderSheet.getRange(rowIndex, 8).setValue(newStatus);
+        const allData = orderSheet.getDataRange().getValues();
+        const targetRow = allData[rowIndex - 1];
+        if (!targetRow) throw new Error("ไม่พบแถวออเดอร์ที่ต้องการอัปเดต");
 
+        const targetTs = String(targetRow[0] || '').trim();
+        const targetRound = String(targetRow[1] || '').trim();
+        const targetUserId = String(targetRow[2] || '').trim();
+        const targetName = String(targetRow[3] || 'ลูกค้า').trim();
+
+        // ค้นหาแถวทั้งหมดที่เป็นบิลเดียวกัน (กรณีออเดอร์เก่าที่เคยแยกแถว หรือมีหลายแถว)
+        const matchingRowIndices = [];
+        const combinedMenuList = [];
+        let combinedTotalQty = 0;
+
+        for (let i = 1; i < allData.length; i++) {
+          const r = allData[i];
+          const rTs = String(r[0] || '').trim();
+          const rRound = String(r[1] || '').trim();
+          const rUser = String(r[2] || '').trim();
+
+          const isExactSameBill = (i === (rowIndex - 1)) || 
+            (targetUserId && targetUserId !== '-' && targetUserId.startsWith('U') && rUser === targetUserId && rTs === targetTs && rRound === targetRound);
+
+          if (isExactSameBill) {
+            matchingRowIndices.push(i + 1);
+            const mName = String(r[4] || '').trim();
+            const mQty = parseInt(r[5], 10) || 1;
+            combinedTotalQty += mQty;
+            if (mName) {
+              if (mName.includes('x') || mName.includes(',')) {
+                combinedMenuList.push(mName);
+              } else {
+                combinedMenuList.push(mQty > 1 ? `${mName} x ${mQty}` : mName);
+              }
+            }
+          }
+        }
+
+        // อัปเดตสถานะของทุกแถวที่เป็นบิลเดียวกัน
+        matchingRowIndices.forEach(idx => {
+          orderSheet.getRange(idx, 8).setValue(newStatus);
+        });
+
+        // ส่งแจ้งเตือน LINE เพียง 1 ครั้งสำหรับทั้งบิล
         let notified = false;
         let notifyError = "";
         if (notifyCustomer) {
           try {
-            const rowData = orderSheet.getRange(rowIndex, 1, 1, 12).getValues()[0];
-            const oRound = String(rowData[1] || "-");
-            const oUserId = String(rowData[2] || "").trim();
-            const oName = String(rowData[3] || "ลูกค้า");
-            const oMenu = String(rowData[4] || "อาหาร");
-            const oQty = parseInt(rowData[5], 10) || 1;
+            const oRound = targetRound || "-";
+            const oUserId = targetUserId;
+            const oName = targetName;
+            const oMenu = combinedMenuList.join(', ') || String(targetRow[4] || "อาหาร");
+            const oQty = combinedTotalQty || parseInt(targetRow[5], 10) || 1;
 
             const token = getLineChannelAccessToken(ss);
             const liffUrl = getSettingValue(ss, "LiffUrl", LIFF_ORDER_URL);
