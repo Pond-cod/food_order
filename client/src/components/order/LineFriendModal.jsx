@@ -40,25 +40,15 @@ export default function LineFriendModal({ isOpen, onClose }) {
             <i className="fa-solid fa-xmark"></i>
           </button>
 
-          {/* Floating Avatar & Food Emoticons */}
+          {/* Floating LINE Logo */}
           <div className="header-badge-row">
             <div className="line-avatar-badge">
               <i className="fa-brands fa-line"></i>
             </div>
-            <div className="floating-emoji-tag">
-              <span>🍲</span>
-              <span>🍱</span>
-              <span>🍳</span>
-            </div>
-          </div>
-
-          <div className="highlight-pill">
-            <i className="fa-solid fa-bell text-warning me-1"></i>
-            <span>ระบบสั่งอาหาร & แจ้งเตือนสถานะ</span>
           </div>
 
           <h3 className="modal-main-title">
-            เพิ่มเพื่อน LINE เพื่อไม่พลาดออเดอร์!
+            เพิ่มเพื่อน LINE เพื่อไม่พลาดออเดอร์
           </h3>
           <p className="modal-main-desc">
             รับใบเสร็จทันที • รู้คิวปรุงเสร็จ • อาหารพร้อมเสิร์ฟถึงโต๊ะ
@@ -101,9 +91,9 @@ export default function LineFriendModal({ isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Modal Body: Direct, Easy & Visual */}
+        {/* Modal Body: Clean, Direct & Easy */}
         <div className="line-modal-body">
-          {/* Method 1: Big Colorful Add Friend CTA */}
+          {/* Method 1: Single Prominent Add Friend CTA */}
           <div className="add-friend-primary-section">
             <a 
               href={LINE_ADD_FRIEND_URL} 
@@ -116,40 +106,20 @@ export default function LineFriendModal({ isOpen, onClose }) {
               </div>
               <div className="btn-line-content">
                 <span className="btn-line-title">กดเพิ่มเพื่อน LINE ทันที</span>
-                <span className="btn-line-sub">แตะเพื่อเปิดแอปและรับแจ้งเตือนฟรี</span>
+                <span className="btn-line-sub">แตะเพื่อเปิดแอปและรับแจ้งเตือน</span>
               </div>
               <i className="fa-solid fa-arrow-right btn-line-arrow"></i>
             </a>
-
-            {/* Official Button Badge */}
-            <div className="mt-2 text-center">
-              <a 
-                href={LINE_ADD_FRIEND_URL} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="d-inline-block hover-scale"
-              >
-                <img 
-                  src={LINE_ADD_FRIEND_BTN_IMG} 
-                  alt="เพิ่มเพื่อน" 
-                  height="34" 
-                  border="0" 
-                  style={{ borderRadius: '6px', boxShadow: '0 4px 10px rgba(6, 199, 85, 0.2)' }}
-                />
-              </a>
-            </div>
           </div>
 
-          {/* Cheerful Colorful Divider */}
+          {/* Clean Divider */}
           <div className="colorful-divider">
             <span className="divider-line left"></span>
-            <span className="divider-badge">
-              <i className="fa-solid fa-qrcode me-1 text-success"></i> หรือ สแกน QR Code ด้วยมือถือ
-            </span>
+            <span className="divider-badge">หรือ สแกน QR Code</span>
             <span className="divider-line right"></span>
           </div>
 
-          {/* Method 2: Beautiful Framed QR Code */}
+          {/* Method 2: Framed QR Code */}
           <div className="qr-highlight-box">
             <div className="qr-white-card">
               <img 
@@ -159,8 +129,7 @@ export default function LineFriendModal({ isOpen, onClose }) {
               />
             </div>
             <div className="qr-hint-text">
-              <span className="badge bg-warning text-dark me-1" style={{ fontSize: '10px' }}>TIP</span>
-              เปิดกล้องมือถือ หรือแอป LINE สแกนภาพนี้ได้เลยค่ะ 😊
+              เปิดกล้องมือถือ หรือแอป LINE เพื่อสแกน
             </div>
           </div>
 
@@ -182,8 +151,7 @@ export default function LineFriendModal({ isOpen, onClose }) {
               onClick={handleClose}
             >
               <span>เข้าสู่หน้าสั่งอาหาร</span>
-              <span className="store-badge">🍱 เลือกเมนู</span>
-              <i className="fa-solid fa-chevron-right ms-1"></i>
+              <i className="fa-solid fa-arrow-right ms-1"></i>
             </button>
           </div>
         </div>
@@ -292,13 +260,12 @@ export default function LineFriendModal({ isOpen, onClose }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 10px;
-          margin-bottom: 8px;
+          margin-bottom: 10px;
         }
 
         .line-avatar-badge {
-          width: 52px;
-          height: 52px;
+          width: 54px;
+          height: 54px;
           border-radius: 50%;
           background: #FFFFFF;
           color: #06C755;
@@ -308,31 +275,6 @@ export default function LineFriendModal({ isOpen, onClose }) {
           justify-content: center;
           box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
           border: 3px solid rgba(255, 255, 255, 0.9);
-        }
-
-        .floating-emoji-tag {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          background: rgba(255, 255, 255, 0.22);
-          backdrop-filter: blur(4px);
-          border: 1px solid rgba(255, 255, 255, 0.35);
-          padding: 5px 10px;
-          border-radius: 20px;
-          font-size: 17px;
-        }
-
-        .highlight-pill {
-          display: inline-flex;
-          align-items: center;
-          background: rgba(0, 0, 0, 0.22);
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          padding: 3px 12px;
-          border-radius: 20px;
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.2px;
-          margin-bottom: 6px;
         }
 
         .modal-main-title {
@@ -652,24 +594,6 @@ export default function LineFriendModal({ isOpen, onClose }) {
           color: #0F172A;
           border-color: #94A3B8;
           transform: translateY(-1px);
-        }
-
-        .store-badge {
-          background: #FEF3C7;
-          color: #D97706;
-          border: 1px solid #FDE68A;
-          padding: 2px 8px;
-          border-radius: 12px;
-          font-size: 11.5px;
-          font-weight: 600;
-        }
-
-        /* Hover Scale */
-        .hover-scale {
-          transition: transform 0.15s ease;
-        }
-        .hover-scale:hover {
-          transform: scale(1.05);
         }
 
         /* Animations */
