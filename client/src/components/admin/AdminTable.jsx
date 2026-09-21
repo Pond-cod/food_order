@@ -377,13 +377,13 @@ export default function AdminTable({
                       onChange={(e) => setRole(e.target.value)}
                     >
                       <option value="Admin">Admin (กำหนดหน้าสั่งอาหาร & จัดการเมนู)</option>
-                      <option value="Cook">Cook (เน้นเมนู และออเดอร์ครัว)</option>
-                      <option value="SuperAdmin">SuperAdmin (เจ้าของร้าน / จัดการได้ทุกส่วนรวมทั้งผู้ดูแล)</option>
+                      <option value="Cook">Cook (เน้นเมนู และออเดอร์ครัว - รับแจ้งเตือนออเดอร์ใหม่ใน LINE 🍳)</option>
+                      <option value="SuperAdmin">SuperAdmin (เจ้าของร้าน / จัดการได้ทุกส่วน - รับแจ้งเตือนใน LINE 📲)</option>
                     </select>
-                    <small className="text-muted d-block mt-1" style={{ fontSize: '11px' }}>
-                      * Admin: จัดการรอบและเมนูได้ แต่ไม่เห็นแท็บผู้ดูแล<br/>
-                      * Cook: เปิดหน้าออเดอร์ครัวเป็นหลัก และปิดขายเมนูหมดได้
-                    </small>
+                    <div className="alert alert-success bg-success bg-opacity-10 border-success border-opacity-25 py-2 px-2 mt-2 mb-0" style={{ fontSize: '11px' }}>
+                      <i className="fa-solid fa-bell text-success me-1"></i>
+                      <strong>ระบบแจ้งเตือนอัตโนมัติ:</strong> ผู้ใช้ที่มีบทบาท <strong>Cook</strong> และ <strong>SuperAdmin</strong> จะได้รับข้อความแจ้งเตือนผ่าน LINE ทันทีที่มีลูกค้าสั่งอาหารใหม่เข้าครัว
+                    </div>
                   </div>
                 </div>
 

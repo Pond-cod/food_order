@@ -523,6 +523,190 @@ function buildOrderReceiptFlex(orderData, ss) {
 }
 
 /**
+ * ดึงรายชื่อ LINE User ID ของทีมงาน/แม่ครัว/เจ้าของร้าน ตามบทบาทที่กำหนด (เช่น Cook, SuperAdmin)
+ */
+function getStaffNotificationTargets(ss, targetRoles) {
+  const targets = [];
+  const targetSs = ss || getSpreadsheet();
+  if (!targetSs) return targets;
+  const adminSheet = targetSs.getSheetByName("Admins");
+  if (!adminSheet) return targets;
+
+  const data = adminSheet.getDataRange().getValues();
+  const normalizedRoles = (targetRoles || []).map(function(r) { return String(r).trim().toLowerCase(); });
+
+  for (let i = 1; i < data.length; i++) {
+    const uid = String(data[i][0] || "").trim();
+    const displayName = String(data[i][1] || "Admin");
+    const role = String(data[i][2] || "Admin").trim().toLowerCase();
+    const status = String(data[i][4] || "Active").trim().toLowerCase();
+
+    const isActive = (status !== "inactive" && status !== "ปิดใช้งาน");
+    const isTarget = normalizedRoles.includes(role) || normalizedRoles.includes("all");
+
+    if (uid && uid.startsWith("U") && isActive && isTarget) {
+      targets.push({
+        userId: uid,
+        displayName: displayName,
+        role: data[i][2]
+      });
+    }
+  }
+  return targets;
+}
+
+/**
+ * สร้าง Flex Message แจ้งเตือนออเดอร์ใหม่เข้าครัว (สำหรับ Cook และ SuperAdmin)
+ */
+function buildKitchenNewOrderFlex(orderData, adminUrl) {
+  const round = orderData.round || "รอบปกติ";
+  const ts = orderData.timestamp || "";
+  const timeStr = ts.length >= 16 ? ts.substring(11, 16) : ts;
+  const customerName = orderData.displayName || "ลูกค้า";
+  const phone = (orderData.phone && orderData.phone !== "-") ? orderData.phone : "";
+  const department = (orderData.department && orderData.department !== "-") ? orderData.department : "";
+  const items = orderData.items || [];
+  const totalQty = orderData.totalQuantity || items.length;
+  const totalPrice = orderData.totalPrice || 0;
+  const note = (orderData.note && orderData.note !== "-") ? orderData.note : "";
+  const url = adminUrl || LIFF_ORDER_URL;
+
+  const itemBoxes = items.map(function(it) {
+    let name = String(it.menuName || "").trim();
+    const qty = parseInt(it.quantity, 10) || 1;
+    const extras = [];
+    if (it.isExtra && !name.includes("พิเศษ")) extras.push("พิเศษ");
+    if (it.hasEgg && !name.includes("ไข่ดาว")) extras.push("+ไข่ดาว");
+    if (extras.length > 0) name += " (" + extras.join(", ") + ")";
+
+    return {
+      "type": "box",
+      "layout": "horizontal",
+      "margin": "sm",
+      "contents": [
+        { "type": "text", "text": "• " + name, "size": "sm", "color": "#1E293B", "flex": 4, "wrap": true },
+        { "type": "text", "text": "x" + qty, "size": "sm", "weight": "bold", "color": "#D97706", "align": "end", "flex": 1 }
+      ]
+    };
+  });
+
+  const bodyContents = [
+    {
+      "type": "box",
+      "layout": "horizontal",
+      "contents": [
+        { "type": "text", "text": "ผู้สั่ง:", "size": "xs", "color": "#64748B", "flex": 2 },
+        { "type": "text", "text": customerName, "size": "xs", "weight": "bold", "color": "#0F172A", "flex": 5, "wrap": true }
+      ]
+    }
+  ];
+
+  if (phone) {
+    bodyContents.push({
+      "type": "box",
+      "layout": "horizontal",
+      "margin": "xs",
+      "contents": [
+        { "type": "text", "text": "เบอร์โทร:", "size": "xs", "color": "#64748B", "flex": 2 },
+        { "type": "text", "text": phone, "size": "xs", "weight": "bold", "color": "#2563EB", "flex": 5 }
+      ]
+    });
+  }
+
+  if (department) {
+    bodyContents.push({
+      "type": "box",
+      "layout": "horizontal",
+      "margin": "xs",
+      "contents": [
+        { "type": "text", "text": "แผนก/โต๊ะ:", "size": "xs", "color": "#64748B", "flex": 2 },
+        { "type": "text", "text": department, "size": "xs", "weight": "bold", "color": "#DC2626", "flex": 5 }
+      ]
+    });
+  }
+
+  bodyContents.push({ "type": "separator", "margin": "md", "color": "#E2E8F0" });
+  bodyContents.push({
+    "type": "text",
+    "text": "📋 รายการอาหารที่ต้องปรุง (" + totalQty + " กล่อง)",
+    "size": "xs",
+    "weight": "bold",
+    "color": "#475569",
+    "margin": "md"
+  });
+
+  bodyContents.push.apply(bodyContents, itemBoxes);
+
+  if (note) {
+    bodyContents.push({
+      "type": "box",
+      "layout": "horizontal",
+      "margin": "sm",
+      "backgroundColor": "#FEF2F2",
+      "paddingAll": "6px",
+      "cornerRadius": "6px",
+      "contents": [
+        { "type": "text", "text": "⚠️ หมายเหตุ: " + note, "size": "xxs", "color": "#DC2626", "wrap": true }
+      ]
+    });
+  }
+
+  bodyContents.push({ "type": "separator", "margin": "md", "color": "#E2E8F0" });
+  bodyContents.push({
+    "type": "box",
+    "layout": "horizontal",
+    "margin": "md",
+    "contents": [
+      { "type": "text", "text": "รวมทั้งสิ้น (" + totalQty + " กล่อง)", "size": "sm", "weight": "bold", "color": "#0F172A" },
+      { "type": "text", "text": "฿" + Number(totalPrice).toLocaleString(), "size": "md", "weight": "bold", "color": "#059669", "align": "end" }
+    ]
+  });
+
+  return {
+    "type": "flex",
+    "altText": "🍳 มีออเดอร์ใหม่เข้าครัว! (" + customerName + " - " + totalQty + " กล่อง)",
+    "contents": {
+      "type": "bubble",
+      "size": "mega",
+      "header": {
+        "type": "box",
+        "layout": "vertical",
+        "backgroundColor": "#D97706",
+        "paddingAll": "16px",
+        "contents": [
+          { "type": "text", "text": "🍳 มีออเดอร์ใหม่เข้าครัว!", "weight": "bold", "color": "#FFFFFF", "size": "md" },
+          { "type": "text", "text": "รอบ: " + round + (timeStr ? " · เวลา " + timeStr + " น." : ""), "color": "#FEF3C7", "size": "xs", "margin": "xs" }
+        ]
+      },
+      "body": {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "xs",
+        "contents": bodyContents
+      },
+      "footer": {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "xs",
+        "contents": [
+          {
+            "type": "button",
+            "action": {
+              "type": "uri",
+              "label": "🍳 เปิดดูหน้าจอครัว (Kitchen View)",
+              "uri": url
+            },
+            "style": "primary",
+            "color": "#D97706",
+            "height": "sm"
+          }
+        ]
+      }
+    }
+  };
+}
+
+/**
  * สร้าง Flex Message ประกาศเปิดรอบสั่งอาหาร (Round Announcement)
  */
 function buildRoundAnnouncementFlex(roundTitle, notice, menus, liffUrl) {
@@ -1324,7 +1508,7 @@ function doPost(e) {
         department: department
       }, ss);
 
-      // ส่ง Push Message ตรงเข้าห้องแชท LINE OA ของลูกค้ารายบุคคล (ถ้ามี Token)
+      // 1. ส่ง Push Message ตรงเข้าห้องแชท LINE OA ของลูกค้ารายบุคคล (ถ้ามี Token)
       let linePushed = false;
       try {
         const token = getLineChannelAccessToken(ss);
@@ -1332,8 +1516,37 @@ function doPost(e) {
           const pushRes = sendLinePush(token, userId, [flexReceipt]);
           linePushed = pushRes.success;
         }
+
+        // 2. ส่งแจ้งเตือนออเดอร์ใหม่เข้า LINE ของ Cook และ SuperAdmin ทันที 🍳
+        if (token) {
+          const liffUrl = getSettingValue(ss, "LiffUrl", LIFF_ORDER_URL);
+          const kitchenFlex = buildKitchenNewOrderFlex({
+            round: round,
+            timestamp: timestamp,
+            displayName: displayName,
+            phone: phone,
+            department: department,
+            items: validItems,
+            totalQuantity: totalQuantity,
+            totalPrice: payload.total || 0,
+            note: combinedNote
+          }, liffUrl);
+
+          const staffTargets = getStaffNotificationTargets(ss, ["cook", "superadmin"]);
+          staffTargets.forEach(function(staff) {
+            if (staff.userId && staff.userId !== userId) {
+              sendLinePush(token, staff.userId, [kitchenFlex]);
+            }
+          });
+
+          // 3. ส่งเข้า LINE Group ห้องครัว (ถ้ามีการระบุ KitchenGroupId ใน Settings)
+          const kitchenGroupId = getSettingValue(ss, "KitchenGroupId", "");
+          if (kitchenGroupId && (kitchenGroupId.startsWith("C") || kitchenGroupId.startsWith("R"))) {
+            sendLinePush(token, kitchenGroupId, [kitchenFlex]);
+          }
+        }
       } catch (pErr) {
-        console.warn("LINE push receipt failed: " + pErr.message);
+        console.warn("LINE push failed: " + pErr.message);
       }
 
       return jsonResponse({
