@@ -1,12 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { LINE_ADD_FRIEND_URL, LINE_ADD_FRIEND_BTN_IMG, LINE_QR_CODE } from '../../utils/assets';
 
 export default function LineFriendModal({ isOpen, onClose }) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
-  // ตรวจสอบขนาดหน้าจอ: หากเป็นมือถือให้เริ่มที่แท็บปุ่มแตะ, หากเป็นจอคอมให้เริ่มที่แท็บ QR Code
-  const [activeTab, setActiveTab] = useState(() => {
-    return typeof window !== 'undefined' && window.innerWidth <= 768 ? 'button' : 'qr';
-  });
 
   if (!isOpen) return null;
 
@@ -24,14 +20,14 @@ export default function LineFriendModal({ isOpen, onClose }) {
       className="line-modal-overlay"
       onClick={handleClose}
     >
-      {/* Ambient Glow Background */}
-      <div className="line-modal-glow"></div>
+      {/* Dynamic Colorful Glow Behind Modal */}
+      <div className="line-modal-glow-rainbow"></div>
 
       <div 
         className="line-modal-card"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Hero */}
+        {/* Colorful Gradient Header */}
         <div className="line-modal-header">
           {/* Close Button */}
           <button 
@@ -39,162 +35,161 @@ export default function LineFriendModal({ isOpen, onClose }) {
             className="line-modal-close"
             onClick={handleClose}
             aria-label="Close"
+            title="ปิดหน้าต่าง"
           >
             <i className="fa-solid fa-xmark"></i>
           </button>
 
-          {/* Floating Line Badge */}
-          <div className="line-badge-wrapper">
-            <div className="line-badge-pulse"></div>
-            <div className="line-badge-icon">
+          {/* Floating Avatar & Food Emoticons */}
+          <div className="header-badge-row">
+            <div className="line-avatar-badge">
               <i className="fa-brands fa-line"></i>
             </div>
+            <div className="floating-emoji-tag">
+              <span>🍲</span>
+              <span>🍱</span>
+              <span>🍳</span>
+            </div>
           </div>
 
-          <div className="line-pill-tag">
-            <span className="sparkle">✨</span> LINE Official Account
+          <div className="highlight-pill">
+            <i className="fa-solid fa-bell text-warning me-1"></i>
+            <span>ระบบสั่งอาหาร & แจ้งเตือนสถานะ</span>
           </div>
-          <h3 className="line-modal-title">เพิ่มเพื่อนเพื่อรับการแจ้งเตือน</h3>
-          <p className="line-modal-subtitle">
-            รับใบเสร็จ • อัปเดตสถานะปรุงเสร็จ • สั่งอาหารสะดวก
+
+          <h3 className="modal-main-title">
+            เพิ่มเพื่อน LINE เพื่อไม่พลาดออเดอร์!
+          </h3>
+          <p className="modal-main-desc">
+            รับใบเสร็จทันที • รู้คิวปรุงเสร็จ • อาหารพร้อมเสิร์ฟถึงโต๊ะ
           </p>
 
-          {/* 3 Value Pillars */}
-          <div className="line-pillars-row">
-            <div className="line-pillar-item">
-              <div className="pillar-icon"><i className="fa-solid fa-receipt"></i></div>
-              <span>ใบเสร็จเข้าแชท</span>
+          {/* 3 Colorful Pillars with Distinct Colors */}
+          <div className="colorful-pillars-grid">
+            {/* Pillar 1: Orange/Amber */}
+            <div className="pillar-card pillar-orange">
+              <div className="pillar-badge badge-orange">
+                <i className="fa-solid fa-receipt"></i>
+              </div>
+              <div className="pillar-text">
+                <strong>ใบเสร็จเข้าแชท</strong>
+                <small>ยืนยันออเดอร์ทันที</small>
+              </div>
             </div>
-            <div className="line-pillar-item">
-              <div className="pillar-icon"><i className="fa-solid fa-bell"></i></div>
-              <span>แจ้งเตือนอาหารเสร็จ</span>
+
+            {/* Pillar 2: Mint/Green */}
+            <div className="pillar-card pillar-green">
+              <div className="pillar-badge badge-green">
+                <i className="fa-solid fa-kitchen-set"></i>
+              </div>
+              <div className="pillar-text">
+                <strong>เตือนเมื่อปรุงเสร็จ</strong>
+                <small>อาหารพร้อมรับประทาน</small>
+              </div>
             </div>
-            <div className="line-pillar-item">
-              <div className="pillar-icon"><i className="fa-solid fa-bolt"></i></div>
-              <span>สั่งง่ายใน 1 คลิก</span>
+
+            {/* Pillar 3: Blue/Sky */}
+            <div className="pillar-card pillar-blue">
+              <div className="pillar-badge badge-blue">
+                <i className="fa-solid fa-bolt"></i>
+              </div>
+              <div className="pillar-text">
+                <strong>สั่งง่าย 1 คลิก</strong>
+                <small>สั่งซ้ำได้สะดวกรวดเร็ว</small>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Modal Body */}
+        {/* Modal Body: Direct, Easy & Visual */}
         <div className="line-modal-body">
-          {/* Segmented Tab Switcher */}
-          <div className="line-tab-switcher">
-            <button
-              type="button"
-              className={`line-tab-btn ${activeTab === 'button' ? 'active' : ''}`}
-              onClick={() => setActiveTab('button')}
+          {/* Method 1: Big Colorful Add Friend CTA */}
+          <div className="add-friend-primary-section">
+            <a 
+              href={LINE_ADD_FRIEND_URL} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="colorful-line-button"
             >
-              <i className="fa-solid fa-mobile-screen-button me-1"></i> แตะเพิ่มเพื่อน
-            </button>
-            <button
-              type="button"
-              className={`line-tab-btn ${activeTab === 'qr' ? 'active' : ''}`}
-              onClick={() => setActiveTab('qr')}
-            >
-              <i className="fa-solid fa-qrcode me-1"></i> สแกน QR Code
-            </button>
+              <div className="btn-line-icon">
+                <i className="fa-brands fa-line"></i>
+              </div>
+              <div className="btn-line-content">
+                <span className="btn-line-title">กดเพิ่มเพื่อน LINE ทันที</span>
+                <span className="btn-line-sub">แตะเพื่อเปิดแอปและรับแจ้งเตือนฟรี</span>
+              </div>
+              <i className="fa-solid fa-arrow-right btn-line-arrow"></i>
+            </a>
+
+            {/* Official Button Badge */}
+            <div className="mt-2 text-center">
+              <a 
+                href={LINE_ADD_FRIEND_URL} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="d-inline-block hover-scale"
+              >
+                <img 
+                  src={LINE_ADD_FRIEND_BTN_IMG} 
+                  alt="เพิ่มเพื่อน" 
+                  height="34" 
+                  border="0" 
+                  style={{ borderRadius: '6px', boxShadow: '0 4px 10px rgba(6, 199, 85, 0.2)' }}
+                />
+              </a>
+            </div>
           </div>
 
-          {/* Tab Content 1: Direct Button (Mobile Optimized) */}
-          {activeTab === 'button' && (
-            <div className="tab-pane-fade">
-              <div className="cta-box">
-                <p className="cta-lead">แตะปุ่มสีเขียวด้านล่างเพื่อเปิดแอป LINE ทันที</p>
-                
-                <a 
-                  href={LINE_ADD_FRIEND_URL} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="line-primary-cta"
-                >
-                  <div className="cta-icon-box">
-                    <i className="fa-brands fa-line"></i>
-                  </div>
-                  <div className="cta-text-box">
-                    <span className="cta-title">เพิ่มเพื่อน LINE OA</span>
-                    <span className="cta-desc">แตะเพื่อเปิดแอปและกดเพิ่มเพื่อน</span>
-                  </div>
-                  <i className="fa-solid fa-chevron-right cta-arrow"></i>
-                </a>
+          {/* Cheerful Colorful Divider */}
+          <div className="colorful-divider">
+            <span className="divider-line left"></span>
+            <span className="divider-badge">
+              <i className="fa-solid fa-qrcode me-1 text-success"></i> หรือ สแกน QR Code ด้วยมือถือ
+            </span>
+            <span className="divider-line right"></span>
+          </div>
 
-                <div className="mt-3">
-                  <span className="text-muted small">หรือแตะปุ่มทางการของ LINE:</span>
-                  <div className="mt-1">
-                    <a 
-                      href={LINE_ADD_FRIEND_URL} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="d-inline-block hover-lift"
-                    >
-                      <img 
-                        src={LINE_ADD_FRIEND_BTN_IMG} 
-                        alt="เพิ่มเพื่อน" 
-                        height="38" 
-                        border="0" 
-                        style={{ borderRadius: '6px', boxShadow: '0 4px 12px rgba(6, 199, 85, 0.25)' }}
-                      />
-                    </a>
-                  </div>
-                </div>
-              </div>
+          {/* Method 2: Beautiful Framed QR Code */}
+          <div className="qr-highlight-box">
+            <div className="qr-white-card">
+              <img 
+                src={LINE_QR_CODE} 
+                alt="LINE OA QR Code" 
+                className="qr-img-fluid"
+              />
             </div>
-          )}
-
-          {/* Tab Content 2: QR Code Scan */}
-          {activeTab === 'qr' && (
-            <div className="tab-pane-fade">
-              <div className="qr-container-outer">
-                {/* Viewfinder Frame with Scanner Brackets */}
-                <div className="viewfinder-frame">
-                  <span className="corner corner-tl"></span>
-                  <span className="corner corner-tr"></span>
-                  <span className="corner corner-bl"></span>
-                  <span className="corner corner-br"></span>
-                  
-                  <div className="qr-image-wrapper">
-                    <img 
-                      src={LINE_QR_CODE} 
-                      alt="LINE QR Code" 
-                      className="qr-image" 
-                    />
-                  </div>
-                </div>
-
-                <div className="qr-instruction">
-                  <i className="fa-solid fa-camera text-success me-1"></i>
-                  <span>เปิดกล้องมือถือ หรือ แอป LINE แล้วสแกนภาพนี้</span>
-                </div>
-              </div>
+            <div className="qr-hint-text">
+              <span className="badge bg-warning text-dark me-1" style={{ fontSize: '10px' }}>TIP</span>
+              เปิดกล้องมือถือ หรือแอป LINE สแกนภาพนี้ได้เลยค่ะ 😊
             </div>
-          )}
+          </div>
 
-          {/* Checkbox: Don't show again */}
-          <div className="dont-show-container">
-            <label className="checkbox-label">
+          {/* Footer Controls: Checkbox & Enter Button */}
+          <div className="modal-footer-section">
+            <label className="friendly-checkbox">
               <input 
                 type="checkbox" 
-                className="checkbox-input"
                 checked={dontShowAgain}
                 onChange={(e) => setDontShowAgain(e.target.checked)}
               />
-              <span className="checkbox-custom"></span>
-              <span className="checkbox-text">ไม่ต้องแสดงหน้านี้อีกในครั้งถัดไป</span>
+              <span className="checkbox-box"></span>
+              <span className="checkbox-label-text">ไม่ต้องแสดงหน้านี้อีกในครั้งต่อไป</span>
             </label>
-          </div>
 
-          {/* Enter Order Page Button */}
-          <button 
-            type="button" 
-            className="enter-order-btn"
-            onClick={handleClose}
-          >
-            <span>เข้าสู่หน้าสั่งอาหาร</span>
-            <i className="fa-solid fa-arrow-right enter-arrow"></i>
-          </button>
+            <button 
+              type="button" 
+              className="enter-store-btn"
+              onClick={handleClose}
+            >
+              <span>เข้าสู่หน้าสั่งอาหาร</span>
+              <span className="store-badge">🍱 เลือกเมนู</span>
+              <i className="fa-solid fa-chevron-right ms-1"></i>
+            </button>
+          </div>
         </div>
       </div>
 
+      {/* Embedded High-Aesthetic Colorful CSS */}
       <style>{`
         .line-modal-overlay {
           position: fixed;
@@ -202,71 +197,82 @@ export default function LineFriendModal({ isOpen, onClose }) {
           left: 0;
           width: 100vw;
           height: 100vh;
-          background: rgba(15, 23, 42, 0.72);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          background: rgba(15, 23, 42, 0.75);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
           z-index: 99999;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 16px;
-          animation: overlayFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          padding: 14px;
+          animation: fadeInFast 0.25s ease-out;
         }
 
-        .line-modal-glow {
+        .line-modal-glow-rainbow {
           position: absolute;
-          width: 380px;
-          height: 380px;
+          width: 420px;
+          height: 420px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(6, 199, 85, 0.28) 0%, rgba(6, 199, 85, 0) 70%);
-          filter: blur(40px);
+          background: radial-gradient(circle, rgba(16, 185, 129, 0.3) 0%, rgba(245, 158, 11, 0.2) 50%, transparent 70%);
+          filter: blur(50px);
           pointer-events: none;
-          animation: pulseGlow 4s ease-in-out infinite alternate;
         }
 
         .line-modal-card {
           position: relative;
           background: #FFFFFF;
-          border-radius: 28px;
+          border-radius: 26px;
           width: 100%;
-          max-width: 440px;
-          overflow: hidden;
-          box-shadow: 0 25px 60px -12px rgba(6, 199, 85, 0.25), 0 12px 36px -8px rgba(0, 0, 0, 0.18);
-          border: 1px solid rgba(255, 255, 255, 0.8);
-          animation: modalScaleUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+          max-width: 430px;
+          max-height: 94vh;
+          overflow-y: auto;
+          box-shadow: 0 24px 60px -12px rgba(6, 199, 85, 0.28), 0 12px 32px -4px rgba(0, 0, 0, 0.16);
+          border: 2px solid rgba(255, 255, 255, 0.9);
+          animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
+        /* Custom Scrollbar for small mobile screens */
+        .line-modal-card::-webkit-scrollbar {
+          width: 5px;
+        }
+        .line-modal-card::-webkit-scrollbar-thumb {
+          background: #CBD5E1;
+          border-radius: 10px;
+        }
+
+        /* Header */
         .line-modal-header {
           position: relative;
-          background: linear-gradient(145deg, #049743 0%, #06C755 50%, #10B981 100%);
+          background: linear-gradient(135deg, #059669 0%, #06C755 45%, #10B981 80%, #047857 100%);
           color: #FFFFFF;
-          padding: 24px 20px 20px;
+          padding: 22px 18px 18px;
           text-align: center;
           overflow: hidden;
         }
 
-        .line-modal-header::before {
+        .line-modal-header::after {
           content: '';
           position: absolute;
-          top: -50%;
-          left: -50%;
-          width: 200%;
-          height: 200%;
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 10%, transparent 60%);
+          top: -40px;
+          right: -40px;
+          width: 130px;
+          height: 130px;
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, transparent 70%);
+          border-radius: 50%;
           pointer-events: none;
         }
 
         .line-modal-close {
           position: absolute;
-          top: 14px;
-          right: 14px;
+          top: 12px;
+          right: 12px;
           width: 32px;
           height: 32px;
           border-radius: 50%;
-          background: rgba(255, 255, 255, 0.22);
+          background: rgba(255, 255, 255, 0.25);
           backdrop-filter: blur(6px);
           -webkit-backdrop-filter: blur(6px);
-          border: 1px solid rgba(255, 255, 255, 0.35);
+          border: 1px solid rgba(255, 255, 255, 0.4);
           color: #FFFFFF;
           font-size: 14px;
           display: flex;
@@ -278,322 +284,325 @@ export default function LineFriendModal({ isOpen, onClose }) {
         }
 
         .line-modal-close:hover {
-          background: rgba(255, 255, 255, 0.4);
-          transform: rotate(90deg) scale(1.05);
+          background: rgba(255, 255, 255, 0.45);
+          transform: rotate(90deg) scale(1.08);
         }
 
-        .line-badge-wrapper {
-          position: relative;
-          width: 58px;
-          height: 58px;
-          margin: 0 auto 10px;
-        }
-
-        .line-badge-pulse {
-          position: absolute;
-          inset: -4px;
-          border-radius: 50%;
-          background: rgba(255, 255, 255, 0.3);
-          animation: badgePulse 2s infinite;
-        }
-
-        .line-badge-icon {
-          position: relative;
-          width: 100%;
-          height: 100%;
-          border-radius: 50%;
-          background: #FFFFFF;
-          color: #06C755;
-          font-size: 34px;
+        .header-badge-row {
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+          gap: 10px;
+          margin-bottom: 8px;
         }
 
-        .line-pill-tag {
+        .line-avatar-badge {
+          width: 52px;
+          height: 52px;
+          border-radius: 50%;
+          background: #FFFFFF;
+          color: #06C755;
+          font-size: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+          border: 3px solid rgba(255, 255, 255, 0.9);
+        }
+
+        .floating-emoji-tag {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          background: rgba(255, 255, 255, 0.22);
+          backdrop-filter: blur(4px);
+          border: 1px solid rgba(255, 255, 255, 0.35);
+          padding: 5px 10px;
+          border-radius: 20px;
+          font-size: 17px;
+        }
+
+        .highlight-pill {
           display: inline-flex;
           align-items: center;
-          gap: 4px;
-          background: rgba(255, 255, 255, 0.22);
-          border: 1px solid rgba(255, 255, 255, 0.35);
-          padding: 3px 10px;
+          background: rgba(0, 0, 0, 0.22);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          padding: 3px 12px;
           border-radius: 20px;
           font-size: 11px;
           font-weight: 600;
-          letter-spacing: 0.3px;
+          letter-spacing: 0.2px;
           margin-bottom: 6px;
         }
 
-        .line-modal-title {
-          font-size: 19px;
+        .modal-main-title {
+          font-size: 18.5px;
           font-weight: 700;
-          margin-bottom: 4px;
-          letter-spacing: -0.3px;
-          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+          margin-bottom: 3px;
+          letter-spacing: -0.2px;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
         }
 
-        .line-modal-subtitle {
-          font-size: 12.5px;
-          color: rgba(255, 255, 255, 0.9);
-          margin-bottom: 14px;
+        .modal-main-desc {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.92);
+          margin-bottom: 12px;
           font-weight: 400;
         }
 
-        .line-pillars-row {
+        /* 3 Colorful Pillars */
+        .colorful-pillars-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 6px;
-          margin-top: 6px;
         }
 
-        .line-pillar-item {
-          background: rgba(255, 255, 255, 0.16);
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          backdrop-filter: blur(4px);
-          border-radius: 12px;
-          padding: 8px 4px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .pillar-icon {
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: rgba(255, 255, 255, 0.25);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 11px;
-          color: #FFFFFF;
-        }
-
-        .line-pillar-item span {
-          font-size: 10.5px;
-          font-weight: 600;
-          line-height: 1.2;
-          color: #FFFFFF;
-        }
-
-        /* Modal Body */
-        .line-modal-body {
-          padding: 20px 22px 22px;
-          text-align: center;
-        }
-
-        .line-tab-switcher {
-          display: flex;
-          background: #F1F5F9;
-          border-radius: 14px;
-          padding: 4px;
-          margin-bottom: 18px;
-          border: 1px solid #E2E8F0;
-        }
-
-        .line-tab-btn {
-          flex: 1;
-          padding: 8px 12px;
-          font-size: 13px;
-          font-weight: 600;
-          border: none;
-          background: transparent;
-          color: #64748B;
-          border-radius: 10px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .line-tab-btn.active {
+        .pillar-card {
           background: #FFFFFF;
-          color: #06C755;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          border-radius: 12px;
+          padding: 8px 4px 6px;
+          text-align: center;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+          border: 1.5px solid transparent;
+          transition: transform 0.2s ease;
         }
 
-        .tab-pane-fade {
-          animation: tabFadeIn 0.25s ease-out;
+        .pillar-card:hover {
+          transform: translateY(-2px);
         }
 
-        .cta-box {
-          padding: 4px 0 10px;
+        .pillar-orange {
+          border-color: #FED7AA;
+          background: linear-gradient(180deg, #FFFBEB 0%, #FFFFFF 100%);
         }
 
-        .cta-lead {
-          font-size: 13px;
-          color: #475569;
-          font-weight: 500;
-          margin-bottom: 14px;
+        .pillar-green {
+          border-color: #A7F3D0;
+          background: linear-gradient(180deg, #F0FDF4 0%, #FFFFFF 100%);
         }
 
-        .line-primary-cta {
+        .pillar-blue {
+          border-color: #BAE6FD;
+          background: linear-gradient(180deg, #F0F9FF 0%, #FFFFFF 100%);
+        }
+
+        .pillar-badge {
+          width: 26px;
+          height: 26px;
+          border-radius: 50%;
+          margin: 0 auto 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+        }
+
+        .badge-orange {
+          background: #FFEDD5;
+          color: #EA580C;
+        }
+
+        .badge-green {
+          background: #DCFCE7;
+          color: #16A34A;
+        }
+
+        .badge-blue {
+          background: #E0F2FE;
+          color: #0284C7;
+        }
+
+        .pillar-text strong {
+          display: block;
+          font-size: 11px;
+          font-weight: 700;
+          color: #1E293B;
+          line-height: 1.2;
+        }
+
+        .pillar-text small {
+          display: block;
+          font-size: 9.5px;
+          color: #64748B;
+          line-height: 1.1;
+          margin-top: 1px;
+        }
+
+        /* Body */
+        .line-modal-body {
+          padding: 18px 18px 20px;
+        }
+
+        .add-friend-primary-section {
+          margin-bottom: 12px;
+        }
+
+        .colorful-line-button {
           display: flex;
           align-items: center;
           gap: 12px;
-          background: linear-gradient(135deg, #06C755 0%, #05A044 100%);
+          background: linear-gradient(135deg, #06C755 0%, #00B900 60%, #059669 100%);
           color: #FFFFFF;
           text-decoration: none;
           padding: 12px 16px;
           border-radius: 16px;
-          box-shadow: 0 8px 20px rgba(6, 199, 85, 0.35);
-          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-          border: 1.5px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 8px 22px rgba(6, 199, 85, 0.4);
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          position: relative;
+          overflow: hidden;
         }
 
-        .line-primary-cta:hover {
+        .colorful-line-button::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+          animation: shineGleam 3.5s infinite;
+        }
+
+        .colorful-line-button:hover {
           color: #FFFFFF;
-          transform: translateY(-2px);
-          box-shadow: 0 12px 26px rgba(6, 199, 85, 0.45);
+          transform: translateY(-2px) scale(1.01);
+          box-shadow: 0 12px 28px rgba(6, 199, 85, 0.5);
         }
 
-        .cta-icon-box {
+        .btn-line-icon {
           width: 42px;
           height: 42px;
           border-radius: 12px;
-          background: rgba(255, 255, 255, 0.2);
+          background: #FFFFFF;
+          color: #06C755;
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 26px;
           flex-shrink: 0;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
         }
 
-        .cta-text-box {
+        .btn-line-content {
           flex-grow: 1;
           text-align: left;
         }
 
-        .cta-title {
+        .btn-line-title {
           display: block;
           font-size: 15.5px;
           font-weight: 700;
           line-height: 1.2;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
 
-        .cta-desc {
+        .btn-line-sub {
           display: block;
           font-size: 11.5px;
-          color: rgba(255, 255, 255, 0.85);
+          color: #E8F8EE;
           margin-top: 2px;
         }
 
-        .cta-arrow {
-          font-size: 14px;
-          opacity: 0.8;
+        .btn-line-arrow {
+          font-size: 15px;
+          opacity: 0.9;
           transition: transform 0.2s ease;
         }
 
-        .line-primary-cta:hover .cta-arrow {
-          transform: translateX(3px);
-          opacity: 1;
+        .colorful-line-button:hover .btn-line-arrow {
+          transform: translateX(4px);
+        }
+
+        /* Divider */
+        .colorful-divider {
+          display: flex;
+          align-items: center;
+          margin: 12px 0;
+        }
+
+        .divider-line {
+          flex-grow: 1;
+          height: 1.5px;
+          background: linear-gradient(90deg, #E2E8F0, #CBD5E1);
+        }
+
+        .divider-badge {
+          padding: 0 10px;
+          font-size: 11.5px;
+          font-weight: 600;
+          color: #475569;
+          background: #F8FAFC;
+          border: 1px solid #E2E8F0;
+          border-radius: 20px;
+          white-space: nowrap;
         }
 
         /* QR Frame */
-        .qr-container-outer {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 4px 0 6px;
+        .qr-highlight-box {
+          text-align: center;
+          margin-bottom: 12px;
         }
 
-        .viewfinder-frame {
-          position: relative;
-          padding: 14px;
-          background: #FFFFFF;
-          border-radius: 20px;
-          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
-          border: 1.5px solid #E2E8F0;
+        .qr-white-card {
           display: inline-block;
+          padding: 8px;
+          background: #FFFFFF;
+          border-radius: 16px;
+          border: 2px solid #E2E8F0;
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+          position: relative;
         }
 
-        .corner {
+        .qr-white-card::before {
+          content: '';
           position: absolute;
-          width: 16px;
-          height: 16px;
-          border-color: #06C755;
-          border-style: solid;
-          border-width: 0;
-          pointer-events: none;
+          inset: -3px;
+          border-radius: 18px;
+          background: linear-gradient(135deg, #06C755 0%, #F59E0B 100%);
+          z-index: -1;
+          opacity: 0.5;
         }
 
-        .corner-tl {
-          top: 6px;
-          left: 6px;
-          border-top-width: 3px;
-          border-left-width: 3px;
-          border-top-left-radius: 8px;
-        }
-
-        .corner-tr {
-          top: 6px;
-          right: 6px;
-          border-top-width: 3px;
-          border-right-width: 3px;
-          border-top-right-radius: 8px;
-        }
-
-        .corner-bl {
-          bottom: 6px;
-          left: 6px;
-          border-bottom-width: 3px;
-          border-left-width: 3px;
-          border-bottom-left-radius: 8px;
-        }
-
-        .corner-br {
-          bottom: 6px;
-          right: 6px;
-          border-bottom-width: 3px;
-          border-right-width: 3px;
-          border-bottom-right-radius: 8px;
-        }
-
-        .qr-image-wrapper {
-          border-radius: 12px;
-          overflow: hidden;
-        }
-
-        .qr-image {
-          width: 165px;
-          height: 165px;
+        .qr-img-fluid {
+          width: 140px;
+          height: 140px;
           display: block;
+          border-radius: 10px;
         }
 
-        .qr-instruction {
-          font-size: 12px;
+        .qr-hint-text {
+          font-size: 11.5px;
           color: #64748B;
-          margin-top: 10px;
+          margin-top: 6px;
           font-weight: 500;
         }
 
-        /* Checkbox */
-        .dont-show-container {
-          margin: 16px 0 14px;
-          display: flex;
-          justify-content: center;
+        /* Footer Section */
+        .modal-footer-section {
+          border-top: 1px dashed #E2E8F0;
+          padding-top: 12px;
         }
 
-        .checkbox-label {
-          display: inline-flex;
+        .friendly-checkbox {
+          display: flex;
           align-items: center;
+          justify-content: center;
           gap: 8px;
+          margin-bottom: 12px;
           cursor: pointer;
           user-select: none;
         }
 
-        .checkbox-input {
+        .friendly-checkbox input {
           display: none;
         }
 
-        .checkbox-custom {
+        .checkbox-box {
           width: 18px;
           height: 18px;
           border-radius: 6px;
-          border: 1.5px solid #CBD5E1;
+          border: 2px solid #CBD5E1;
           background: #FFFFFF;
           display: flex;
           align-items: center;
@@ -602,89 +611,82 @@ export default function LineFriendModal({ isOpen, onClose }) {
           flex-shrink: 0;
         }
 
-        .checkbox-input:checked + .checkbox-custom {
+        .friendly-checkbox input:checked + .checkbox-box {
           background: #06C755;
           border-color: #06C755;
         }
 
-        .checkbox-input:checked + .checkbox-custom::after {
+        .friendly-checkbox input:checked + .checkbox-box::after {
           content: '✓';
           color: #FFFFFF;
           font-size: 12px;
           font-weight: 700;
         }
 
-        .checkbox-text {
-          font-size: 12.5px;
+        .checkbox-label-text {
+          font-size: 12px;
           color: #64748B;
         }
 
-        /* Enter Order Page Button */
-        .enter-order-btn {
+        /* Enter Store Button */
+        .enter-store-btn {
           width: 100%;
           padding: 12px 18px;
           border-radius: 14px;
-          background: #F8FAFC;
-          color: #334155;
-          border: 1.5px solid #E2E8F0;
-          font-size: 14.5px;
-          font-weight: 600;
+          background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+          color: #1E293B;
+          border: 1.5px solid #CBD5E1;
+          font-size: 14px;
+          font-weight: 700;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
           cursor: pointer;
           transition: all 0.2s ease;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
         }
 
-        .enter-order-btn:hover {
-          background: #F1F5F9;
+        .enter-store-btn:hover {
+          background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
           color: #0F172A;
-          border-color: #CBD5E1;
+          border-color: #94A3B8;
+          transform: translateY(-1px);
         }
 
-        .enter-order-btn:hover .enter-arrow {
-          transform: translateX(4px);
+        .store-badge {
+          background: #FEF3C7;
+          color: #D97706;
+          border: 1px solid #FDE68A;
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 11.5px;
+          font-weight: 600;
         }
 
-        .enter-arrow {
-          transition: transform 0.2s ease;
-          font-size: 13px;
-        }
-
-        /* Hover Lift Helper */
-        .hover-lift {
+        /* Hover Scale */
+        .hover-scale {
           transition: transform 0.15s ease;
         }
-        .hover-lift:hover {
+        .hover-scale:hover {
           transform: scale(1.05);
         }
 
         /* Animations */
-        @keyframes overlayFadeIn {
+        @keyframes fadeInFast {
           from { opacity: 0; }
           to { opacity: 1; }
         }
 
-        @keyframes modalScaleUp {
-          from { opacity: 0; transform: scale(0.92) translateY(12px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
+        @keyframes popIn {
+          0% { opacity: 0; transform: scale(0.88) translateY(14px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
         }
 
-        @keyframes tabFadeIn {
-          from { opacity: 0; transform: translateY(6px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes badgePulse {
-          0% { transform: scale(1); opacity: 0.6; }
-          50% { transform: scale(1.15); opacity: 0.2; }
-          100% { transform: scale(1); opacity: 0.6; }
-        }
-
-        @keyframes pulseGlow {
-          0% { transform: scale(0.95); opacity: 0.7; }
-          100% { transform: scale(1.15); opacity: 1; }
+        @keyframes shineGleam {
+          0% { left: -100%; }
+          30% { left: 100%; }
+          100% { left: 100%; }
         }
       `}</style>
     </div>
